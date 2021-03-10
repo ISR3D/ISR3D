@@ -81,10 +81,13 @@ Dependencies: in addition to Muscle, ``cmake`` ver. 3.6.3 or later. Additional r
 
 The ISR3D model is capable of working with different flow solvers. This version is set up to use Palabos library, developed by UNIGE. By default, if Palabos is not detected when building the flow solver, it will be downloaded from the UNIGE repository using the script located at ``ISR3D/lib/install_palabos.sh``, which will install Palabos 2.2.0 to the ``/lib/`` folder.
 
-To build ISR3D, enter the ISR3D directory and run ``./build.<machinename>.sh``.
-An example of this file for a desktop Debian-like machine is ``build.linux.sh``. Make sure to set ``MUSCLE3_HOME`` to the location of your MUSCLE3 installation.
-For different machines, especially in HPC environments, it is necessary to prescribe the appropriate compiler name and the address of MUSCLE3 (and flags, if necessary). The folder also contains an example for the Dutch national supercomputer Cartesius, ``build.cartesius.sh`` and the Polish supercomputer Eagle, ``build.eagle.sh``.
-You will need to create the file first if you want to run on a machine for which no build file is yet available.
+To build ISR3D, you'll need to create a build script with the correct settings for your machine, if one is not already available.
+These scripts are in the ``ISR3D/`` directory.
+
+If you are building locally, ``build.linux.sh`` will provide a starting point for a Debian-like Linux environment.
+Make sure your build file sets ``MUSCLE3_HOME`` to the location of your MUSCLE3 installation. For some machines, especially in HPC environments, it is necessary to prescribe the appropriate compiler name and the address of MUSCLE3 (and flags, if necessary). The ``ISR3D/`` folder also contains an example for the Dutch national supercomputer Cartesius, ``build.cartesius.sh`` and the Polish supercomputer Eagle, ``build.eagle.sh``.
+
+Once you have made a suitable build script, make sure that you are in the ``ISR3D/`` directory, and run the script using ``./build.<machine>.sh``.
 
 After running the build script, you should see a CMake build output for each submodel, ending with ``BUILD SUCCESSFUL``, and the executables can be then be found in ``ISR3D/build``.
 To clean the build folders and remove CMake cache files, run ``./build.<machinename>.sh clean``. Cleaning the cache is recommended whenever your library configuration changes.
