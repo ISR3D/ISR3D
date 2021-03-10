@@ -79,7 +79,7 @@ ISR3D
 
 Dependencies: in addition to Muscle, ``cmake`` ver. 3.6.3 or later. Additional requirements are a MPI-compatible C++14 compiler (e.g. GCC 6+ and OpenMPI).
 
-The ISR3D model is capable of working with different flow solvers. This version is set up to use Palabos library, developed by UNIGE. By default, if Palabos is not detected when building the flow solver, it will be downloaded from the UNIGE repository using the script located at ``ISR3D/lib/install_palabos.sh``, which will install Palabos 2.2.0 to the ``/lib/`` folder.
+The ISR3D model is capable of working with different flow solvers. This version is set up to use Palabos library, developed by UNIGE. By default, if Palabos is not detected when building the flow solver, it will be downloaded from the UNIGE repository using the script located at ``ISR3D/lib/install_palabos.sh``, which will install Palabos 2.2.0 to the ``ISR3D/lib/`` folder.
 
 To build ISR3D, you'll need to create a build script with the correct settings for your machine, if one is not already available.
 These scripts are in the ``ISR3D/`` directory.
