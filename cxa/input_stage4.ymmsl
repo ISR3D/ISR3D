@@ -1,0 +1,80 @@
+ymmsl_version: v0.1
+
+model:
+  name: isr3d
+  components:
+    smc: smc
+    voxelizer: voxelizer
+    distributor: distributor
+    flow: FlowController3D
+    collector: collector
+  conduits:
+    smc.cellPositionsOut: voxelizer.cellPositionsIn
+    voxelizer.domainOut1: distributor.domainIn
+    voxelizer.domainOut2: collector.domainIn
+    voxelizer.cellsOut: collector.cellsIn
+    voxelizer.surfacePositionOut: collector.surfacePositionsIn
+    voxelizer.domainBoxOut: collector.domainBoxIn
+    distributor.geometryOut1: flow.geometryIn
+    distributor.geometryOut2: collector.geometryIn
+    flow.shearStressOut: collector.shearStressIn
+#    collector.neointima: smc.CellNeointimaDistance
+    collector.cellMaxStressOut: smc.cellMaxStressIn
+
+settings:
+  ## Input and output
+  muscle_remote_log_level: DEBUG
+  muscle_data_in_dir: "../../cxa"
+  muscle_data_out_dir: "./"
+  smc.run_input_file: "test_vessel.dat"
+  smc.centerline_file: "test_vessel_centerline.csv"
+  flow.input_file: "test_vessel.flow.dat"
+  smc.log_file: "smc.log" #set log file names to "" for no logs
+  voxelizer.log_file: "voxelizer.log"
+  distributor.log_file: "distributor.log"
+  collector.log_file: "collector.log"
+
+  ## Timescale, hours
+  smc.dt: 1.0
+  smc.max_time: 12.0 #hours
+  ## Geometry, mm
+  flowdx: 0.03125
+  ## Options 'rectangular'/'cylindrical'/'curved'; used to set up flow inlet
+  vessel_type: "curved"
+  ## TODO don't read unnecessary geometry parameters (like curvature for a rectangular vessel)
+  smc.balloon_extension: 1.0
+  ## Biology parameters
+  smc.ci_weight_smc: 1.
+  smc.ci_weight_iel: 1.1 #1.25
+  smc.ci_weight_eel: 20.
+  smc.ci_weight_obstacle: 0.1
+  smc.ci_range_factor: 1.06 #1.1 #1.13 #1.3 #1.35
+  smc.ci_threshold_count: 11.5 #inhibited if a double value is "strictly more"; avoid using multiples of SMC weight here
+  smc.smc_drug_conc_threshold: 1.
+  smc.smc_max_stress: 50. #1000000
+  smc.smc_max_strain: 1.5
+  smc.smc_mean_rad: 0.015 #mm
+  smc.fenestration_probability: 0.04 #FvA, ref.
+  smc.endo_endpoint: 15.0 #in days  #15 is 'normal', 10 is 'fast', and 20 is 'slow'. Technically minimal possible value is 4 days.
+  ## Boundary parameters
+  smc.boundary_trim_distance: 0.1
+  smc.Boundary_Inactivity_Range: 0.1 #0.03
+  smc.run_boundary_mobility_x: 0.0
+  smc.run_boundary_mobility_y: 0.0
+  smc.run_boundary_mobility_z: 0.0
+  smc.run_convergence_level: 4e-2
+  ## Output parameters
+  smc.run_vtk_iter: 0
+  smc.run_dat_iter: 0 #checkpointevery
+  smc.run_vtp_scalars: 'typeId/state/age/clock/baFlag/ciFlag/drugConc/strain/wssMax/neoDist'
+  smc.run_vtp_vectors: 'pos0'
+  ## Blood flow
+  flow.flow_velocity: 0.25 #peak velocity in m/s (at the center of the vessel)
+  flow.convergence_limit: 1e-3 #0.05
+  flow.bf_vtk_iter: 0
+  flow.bf_dat_iter: 0
+  flow.write_gifs: 1 #true/false
+  ## Cell mappers
+  voxelizer.smooth_Radius: 0.03 #mm
+  voxelizer.surface_iter: 0
+
