@@ -56,8 +56,6 @@ Quick Installation Guide
 MUSCLE3
 -------
 
-The source code can be obtained from https://github.com/multiscale/muscle3/
-
 At this point, it is recommended to use MUSCLE3 version 0.4.0 available at https://github.com/multiscale/muscle3/releases/tag/0.4.0.
 
 The installation process is described in detail in the MUSCLE3 guide, located at https://muscle3.readthedocs.io/en/latest/installing.html
@@ -72,7 +70,7 @@ NB: before running models with MUSCLE3 the library path has be loaded by running
 
 (This can also be added to your ``~/.bashrc`` to run automatically on terminal startup)
 
-If you have installed MUSCLE3 in a Python virtual environment, as the guide recommends, the environment also has to be activated by running 
+If you have installed MUSCLE3 in a Python virtual environment, as the guide recommends, the environment also has to be activated by running
 
 ``source <MUSCLE3 venv location>/bin/activate``
 
