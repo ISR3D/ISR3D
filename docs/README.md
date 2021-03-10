@@ -83,9 +83,10 @@ Dependencies: in addition to Muscle, ``cmake`` ver. 3.6.3 or later. Additional r
 
 The ISR3D model is capable of working with different flow solvers. This version is set up to use Palabos library, developed by UNIGE. By default, if Palabos is not detected when building the flow solver, it will be downloaded from the UNIGE repository using the script located at ``ISR3D/lib/install_palabos.sh``, which will install Palabos 2.2.0 to the ``/lib/`` folder.
 
-To compile ISR3D and install it into the active directory, create and run ``./ISR3D/build.<machinename>.sh``
+To build ISR3D, enter the ISR3D directory and run ``./build.<machinename>.sh``.
 An example of this file for a desktop Debian-like machine is ``build.linux.sh``. Make sure to set ``MUSCLE3_HOME`` to the location of your MUSCLE3 installation.
 For different machines, especially in HPC environments, it is necessary to prescribe the appropriate compiler name and the address of MUSCLE3 (and flags, if necessary). The folder also contains an example for the Dutch national supercomputer Cartesius, ``build.cartesius.sh`` and the Polish supercomputer Eagle, ``build.eagle.sh``.
+You will need to create the file first if you want to run on a machine for which no build file is yet available.
 
 After running the build script, you should see a CMake build output for each submodel, ending with ``BUILD SUCCESSFUL``, and the executables can be then be found in ``ISR3D/build``.
 To clean the build folders and remove CMake cache files, run ``./build.<machinename>.sh clean``. Cleaning the cache is recommended whenever your library configuration changes.
