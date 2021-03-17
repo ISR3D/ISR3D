@@ -18,16 +18,16 @@
 #SBATCH --array=1-128%20
 
 
-
-### Set number of samples for SA
+###################################################
+########### Job array setting #####################
+###################################################
 # General parameter setting
 NumSample=128
 NumInput=4
 SampleArray=("A")
 Outputname=UQtest
-### Actual UQ run setting
 
-# Better to stay with N*num_sample
+# Fetch the total number of job, and current numbering of job
 NumSimu=$SLURM_ARRAY_TASK_MAX
 CurSimu=$(($SLURM_ARRAY_TASK_ID - 1))
 
@@ -39,10 +39,9 @@ CurSimu=$(($SLURM_ARRAY_TASK_ID - 1))
 ###							: A_0
 ###							: input.ymmsl
 
-### Individual Job pre-setting
-ModValue=$((${CurSimu}%${NumSample}))
 
-# Case start with A
+# Find out the name of UQ instance
+ModValue=$((${CurSimu}%${NumSample}))
 MatValue=${SampleArray[0]}
 MatValueSub=${SampleArray[0]}_${ModValue}
 
@@ -52,18 +51,19 @@ cd ${Outputname}/${MatValue}/${MatValueSub}
 #######################################################################
 ########################## Start Simulation ###########################
 #######################################################################
-echo $(date -u) "kill previous muscle"
+echo $(date -u) "kill previous muscle if existing"
 killall muscle_manager
 
 
-# Setting: activate C++&python muscle and load GCC/OpenMPI
+# Setting: activate C++&python muscle  
+# Important!!!: Need to be adapted your setting
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/muscle3/lib
-source /home/dong/anaconda3/etc/profile.d/conda.sh
-conda activate ISR3D
+source directory_to_anaconda3/anaconda3/etc/profile.d/conda.sh
+conda activate Python_Env_Name
 
-
-module load pre2019
-module load OpenMPI/2.1.1-GCC-6.4.0-2.28
+# Setting: load GCC/OpenMPI
+# Important!!!: Need to be adapted your setting
+module load OpenMPI_version
 
 # Sleep for a while to make sure module loaded
 sleep 1
@@ -75,12 +75,13 @@ muscle_manager ./input_stage4.ymmsl &
 sleep 1
 
 # Start submodels​
+# Important!!!: The directory of submodel needed to be adapted your setting!
 export OMP_NUM_THREADS=24
-/projects/0/einf462/ISR3D_UQ/ISR3D/build/smc --muscle-instance=smc                     >'smc.log' 2>&1  &
-/projects/0/einf462/ISR3D_UQ/ISR3D/build/voxelizer --muscle-instance=voxelizer         >'vol.log' 2>&1  &
-/projects/0/einf462/ISR3D_UQ/ISR3D/build/distributor --muscle-instance=distributor     >'dis.log' 2>&1  &
-/projects/0/einf462/ISR3D_UQ/ISR3D/build/collector --muscle-instance=collector         >'col.log' 2>&1  &
-srun -n 16 /projects/0/einf462/ISR3D_UQ/ISR3D/build/FlowController3D --muscle-instance=flow       >'flow.log' 2>&1
+Directory_to_ISR3D/ISR3D/build/smc --muscle-instance=smc                     >'smc.log' 2>&1  &
+Directory_to_ISR3D/ISR3D/build/voxelizer --muscle-instance=voxelizer         >'vol.log' 2>&1  &
+Directory_to_ISR3D/ISR3D/build/distributor --muscle-instance=distributor     >'dis.log' 2>&1  &
+Directory_to_ISR3D/ISR3D/build/collector --muscle-instance=collector         >'col.log' 2>&1  &
+srun -n num_of_core_on_your_node directory_to_ISR3D/ISR3D/build/FlowController3D --muscle-instance=flow       >'flow.log' 2>&1
 
 wait
 
