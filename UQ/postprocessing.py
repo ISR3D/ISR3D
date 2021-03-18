@@ -62,16 +62,16 @@ lumen_vol = np.sum(lumen_list[:,:,:],axis=2) * 0.03125
 fig = plt.figure()
 
 # plt.plot(np.ones(128)*3.56055,np.linspace(0.0,2.5,128),label='0 days',c='k')
-sns.kdeplot(lumen_vol[:,72],label='3 days',fill=True)
-sns.kdeplot(lumen_vol[:,144],label='6 days',fill=True)
-sns.kdeplot(lumen_vol[:,216],label='9 days',fill=True)
-sns.kdeplot(lumen_vol[:,288],label='12 days',fill=True)
-sns.kdeplot(lumen_vol[:,360],label='15 days',fill=True)
+sns.kdeplot(lumen_vol[:,72],label='3 days')
+sns.kdeplot(lumen_vol[:,144],label='6 days')
+sns.kdeplot(lumen_vol[:,216],label='9 days')
+sns.kdeplot(lumen_vol[:,288],label='12 days')
+sns.kdeplot(lumen_vol[:,360],label='15 days')
 plt.legend(fontsize=10,loc=2)
 plt.xlabel('Lumen volume of blood vessel ($mm^3$)',fontsize=12)
 plt.ylabel('Probability density function',fontsize=12)
 plt.savefig('./'+'pdf.png')
-plt.show()
+plt.clf()
 
 
 
