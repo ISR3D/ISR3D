@@ -74,6 +74,8 @@ sleep 1
 
 # Start submodels​
 # Important!!!: The directory of submodel needed to be adapted your setting!
+# Important!!!: OMP_NUM_THREADS=XX adapted your setting!
+# Important!!!: srun -n XX  adapted your setting!
 export OMP_NUM_THREADS=XX
 Directory_to_ISR3D/ISR3D/build/smc --muscle-instance=smc                     >'smc.log' 2>&1  &
 Directory_to_ISR3D/ISR3D/build/voxelizer --muscle-instance=voxelizer         >'vol.log' 2>&1  &
