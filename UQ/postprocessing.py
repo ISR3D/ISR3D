@@ -11,6 +11,11 @@ for lib_name in lib_list:
 			print(lib_name,' Module not installed')
 			subprocess.run(['pip','install','%s'%lib_name])
 
+import numpy as np
+import csv
+import os 
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 ################################################################################
 ###### Fetch the result data and plot out the PDF and mean+/-STD figures #######
