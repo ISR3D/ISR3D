@@ -22,15 +22,15 @@ import zenodo_get
 
 
 # Transform the normalized sample matrix to ranges of uncertain parameters
-def dim_transform(sobel_vector,uncertain_list):
+def dim_transform(sobol_vector,uncertain_list):
     
     dim = len(uncertain_list)
     for num_dim in range(dim):
         para_max = uncertain_list[num_dim].get('max')
         para_min = uncertain_list[num_dim].get('min')
-        sobel_vector[:,num_dim] = para_min + (para_max-para_min)*sobel_vector[:,num_dim]
+        sobol_vector[:,num_dim] = para_min + (para_max-para_min)*sobol_vector[:,num_dim]
         
-    return sobel_vector
+    return sobol_vector
 
 ####################################################################################
 ##### Sample generation and UQ campaign creation (including instances folder)#######
