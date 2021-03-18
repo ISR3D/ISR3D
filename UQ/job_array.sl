@@ -11,7 +11,7 @@
 # Wall time in format Day-hour:minutes:seconds
 #SBATCH --time=0-00:30:00
 
-## grant
+## Partition, Important!!!: Need to be adapted your setting
 #SBATCH --partition=normal
 
 ## Set job array,
@@ -32,9 +32,7 @@ NumSimu=$SLURM_ARRAY_TASK_MAX
 CurSimu=$(($SLURM_ARRAY_TASK_ID - 1))
 
 
-### Pre-setting of Muscle3 and module loading
 ### The directory should now: Experiment_fold
-###							: job_array.sh updatefunc.py printfunc.py
 ### 						: A 
 ###							: A_0
 ###							: input.ymmsl
@@ -55,7 +53,7 @@ echo $(date -u) "kill previous muscle if existing"
 killall muscle_manager
 
 
-# Setting: activate C++&python muscle  
+# Setting: activate C++& python muscle  
 # Important!!!: Need to be adapted your setting
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/muscle3/lib
 source directory_to_anaconda3/anaconda3/etc/profile.d/conda.sh
@@ -76,12 +74,12 @@ sleep 1
 
 # Start submodels​
 # Important!!!: The directory of submodel needed to be adapted your setting!
-export OMP_NUM_THREADS=24
+export OMP_NUM_THREADS=XX
 Directory_to_ISR3D/ISR3D/build/smc --muscle-instance=smc                     >'smc.log' 2>&1  &
 Directory_to_ISR3D/ISR3D/build/voxelizer --muscle-instance=voxelizer         >'vol.log' 2>&1  &
 Directory_to_ISR3D/ISR3D/build/distributor --muscle-instance=distributor     >'dis.log' 2>&1  &
 Directory_to_ISR3D/ISR3D/build/collector --muscle-instance=collector         >'col.log' 2>&1  &
-srun -n num_of_core_on_your_node directory_to_ISR3D/ISR3D/build/FlowController3D --muscle-instance=flow       >'flow.log' 2>&1
+srun -n XX directory_to_ISR3D/ISR3D/build/FlowController3D --muscle-instance=flow       >'flow.log' 2>&1
 
 wait
 
