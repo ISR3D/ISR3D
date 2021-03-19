@@ -92,11 +92,11 @@ Once you have made a suitable build script, make sure that you are in the ``ISR3
 After running the build script, you should see a CMake build output for each submodel, ending with ``BUILD SUCCESSFUL``, and the executables can be then be found in ``ISR3D/build``.
 To clean the build folders and remove CMake cache files, run ``./build.<machinename>.sh clean``. Cleaning the cache is recommended whenever your library configuration changes.
 
-Download the input file from **THIS LINK** to the ``cxa`` folder.
+Download the input file hosted at https://doi.org/10.5281/zenodo.4603912 and put them into the ``cxa`` folder.
 
-Make a directory for your run in the top-level ISR3D folder, e.g. ``mkdir results & mkdir results/test`` and ``cd`` into it.
+Make a directory for your run in the top-level ``ISR3D/`` folder, e.g. ``mkdir -p results/test`` and ``cd`` into it.
 
-In separate terminals, or through &, run:
+In separate terminals, or through ``&``, run:
 ```
 muscle_manager ../../cxa/input_stage4.ymmsl
 ../../build/smc --muscle-instance=smc
