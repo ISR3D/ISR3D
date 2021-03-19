@@ -126,7 +126,7 @@ for n in range(NumSample):
         settings[para.get('name')] = float(A[n,num_para])
         num_para = num_para + 1
         
-    config = ymmsl.Configuration(model, settings)
+    config = ymmsl.Configuration(model, settings, None, None)
     with open(sample_path+'/input_stage4.ymmsl', 'w') as f:
         ymmsl.save(config, f)
 
