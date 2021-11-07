@@ -1,8 +1,6 @@
 ISR3D and MUSCLE3:
 =======================
 
-This model is released as part of the InSilc project (https://insilc.eu)
-
 ISR3D model description
 -----------------------
 
