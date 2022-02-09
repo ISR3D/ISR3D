@@ -139,39 +139,38 @@ int main(int argc, char *argv[])
     cout << "Writing files for a simple artery..." << endl;
     VtkWriter<agent_t>::writeVtkPolyData(agents.getAgentVector(), createFileName(configDir, "stage1."+smoothCylinderName, "vtp"), "typeId", "");
     agents.writeFile(createFileName(configDir, "stage1."+smoothCylinderName, "dat") );
-    NBWriter<3>::writeFile(nb, createFileName(configDir, "stage1."+smoothCylinderName + "_nb", "dat") );
+    NBWriter<3>::writeFile(nb, r0, createFileName(configDir, "stage1."+smoothCylinderName + "_nb", "dat") );
 
     cout << agents.count() << " agents generated." << endl;
 
     // create simple stent consisting of num_struts straight wires
 
     const int numStruts = config().getValue<int>("num_struts");
-    const int stentLength = config().getValue<double>("stent_length");
-    const int helixPitch = config().getValue<double>("helix_pitch");
+    const double stentLength = config().getValue<double>("stent_length");
+    const double helixPitch = config().getValue<double>("helix_pitch");
     const double stentCurvatureRadius = config().getValue<double>("stent_curvature_radius");
+    const double strutHeight = config().getValue<double>("strut_height");
+    const double strutWidth = config().getValue<double>("strut_width");
+
 
     std::vector<point_t> strutPoints;
-    GeometryGenerator3D::generateSimpleStent(strutPoints, L, stentLength, innerRadius-r0*L, numStruts, helixPitch);
+    GeometryGenerator3D::generateSimpleStent(strutPoints, L, stentLength, innerRadius-r0*L, numStruts, helixPitch, strutHeight, strutWidth);
 
-    cout << "Generating a simple stent; " << strutPoints.size() << " points in the geometry."<< endl;
     AgentContainer<3> strutAgents(strutPoints.size() );
     pointsToCells<3>(strutPoints, strutAgents, AgentFactory3D(), tObstacle3D, 0.5*r0*L);
     bend(strutAgents, stentCurvatureRadius, stentLength);
+    cout << "Generated a simple stent; " << strutPoints.size() << " points in the geometry."<< endl;
 
     strutAgents.writeFile(createFileName(configDir, "simple_stent", "dat"), tObstacle3D);
     VtkWriter<agent_t>::writeVtkPolyData(strutAgents.getAgentVector(), createFileName(configDir, "simple_stent", "vtp"), "typeId", "");
 
-    /// generate a simple "balloon"
-    GeometryGenerator3D::generateSmoothCylinder(balloonPoints, r0*L, stentLength, innerRadius - 2 * r0*L - 0.050, innerRadius - r0*L - 0.050);
-    /// Alternative: use a specific balloon generator:
-    /// SimpleBalloon3D balloon(balloonAgents, yOffset, 0.0, balloonXMin, balloonXMax, L * 2);
-
-    cout << "Generating a simple balloon; " << balloonPoints.size() << " points in the geometry." << endl;
-    AgentContainer<3> balloonAgents(balloonPoints.size() );
-    pointsToCells<3>(balloonPoints, balloonAgents, AgentFactory3D(), tObstacle3D, r0*L);
+    /// generate a simple balloon using a specific balloon generator:
+    SimpleBalloon3D balloon(L * 2, stentLength, innerRadius - L - strutHeight);
+    AgentContainer<3> balloonAgents;
+    balloon.exportObstacles(balloonAgents);
     bend(balloonAgents, stentCurvatureRadius, stentLength);
-
     balloonAgents.writeFile(createFileName(configDir, "simple_balloon", "dat"), tObstacle3D);
+    cout << "Generated a simple balloon; " << balloonAgents.count() << " points in the geometry." << endl;
     VtkWriter<agent_t>::writeVtkPolyData(balloonAgents.getAgentVector(), createFileName(configDir, "simple_balloon", "vtp"), "typeId", "");
 
     /// Create a centerline file
@@ -196,7 +195,7 @@ int main(int argc, char *argv[])
     const std::string centerlineFileName = config().getValue<std::string>("centerline_file");
     centerline.writeToFile(createFileName(configDir,centerlineFileName));
 
-    cout << "Generating geometries done." << endl;
+    cout << "Geometries have been generated." << endl;
 
     return EXIT_SUCCESS;
 }

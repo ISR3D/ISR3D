@@ -22,7 +22,7 @@ public:
     typedef UnaryForce < Agent > unForce;
 
     /// Constructor; characteristic length scale L and maxDispl to be specified in real units, maxTimeStep in non-dimensional system.
-    RungeKuttaIntegratorMPI(unForce & unaryForces_, binForce & binaryForces_, binForce & bondForces_,
+    RungeKuttaIntegratorMPI(unForce & unaryForces_, binForce & binaryForces_, BondForce <Agent> & bondForces_,
                             double L_,
                             double maxDispl_, double maxTimeStep_,
                             NeighbourDetector<Agent> & neighbourDetector_,
@@ -58,7 +58,7 @@ private:
 private:
     UnaryForce <Agent> & unaryForces;
     BinaryForce <Agent> & binaryForces;
-    BinaryForce <Agent> & bondForces;
+    BondForce <Agent> & bondForces;
     double L; //characteristic length
     double maxDispl, maxTimeStep;
     NeighbourDetector<Agent> & neighbourDetector;

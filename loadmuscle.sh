@@ -3,11 +3,12 @@
 #NB: has to be run from the run directory two folders down
 
 CONFIGNAME=$1
-ISR3D_HOME=/home/asvitenkov/ISR/ISR3D_MUSCLE3/
+ISR3D_HOME=/home/pavel/src/ISR3D/
 #cd ISR/ISR3D_MUSCLE3/run/LAD1785/
-. ~/muscle3_venv/bin/activate
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/asvitenkov/muscle3/lib
+. ~/src/muscle3/muscle3_venv/bin/activate
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/pavel/apps/muscle3/lib
 
+killall muscle_manager smc voxelizer distributor collector FlowController3D
 
 #muscle_manager ../../cxa/isr_tinier_test_vessel.ymmsl
 muscle_manager $ISR3D_HOME/cxa/$CONFIGNAME &
@@ -25,7 +26,7 @@ $ISR3D_HOME/build/distributor --muscle-instance=distributor     >'dis_cout.log' 
 $ISR3D_HOME/build/collector --muscle-instance=collector         >'col_cout.log' 2>&1  &
 
 #MPI submodel
-mpirun -np 24 $ISR3D_HOME/build/FlowController3D --muscle-instance=flow       >'flow_cout.log' 2>&1
+mpirun -np 4 $ISR3D_HOME/build/FlowController3D --muscle-instance=flow       >'flow_cout.log' 2>&1
 
 wait
 

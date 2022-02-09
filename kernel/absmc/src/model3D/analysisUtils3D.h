@@ -93,7 +93,7 @@ void printNBCount(AgentContainer<3> & agentContainer, std::string const& fileNam
     for (size_t iAgent=0; iAgent<nAgents; iAgent++) {
         point_t const& pos = agents[iAgent]->getPos();
         agent_t::nb_vec_t const& neighbours = agents[iAgent]->getNeighbours();
-        ofstr << pos << " " << neighbours.size() << " " << endl;
+        ofstr << pos << " " << neighbours.size() << " " << std::endl;
     }
 }
 

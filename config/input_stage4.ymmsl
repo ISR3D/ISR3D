@@ -1,0 +1,67 @@
+ymmsl_version: v0.1
+model:
+  name: isr3d
+  compute_elements:
+    smc: smc
+    voxelizer: voxelizer
+    distributor: distributor
+    flow: FlowController3D
+    collector: collector
+  conduits:
+    smc.cellPositionsOut: voxelizer.cellPositionsIn
+    voxelizer.domainOut1: distributor.domainIn
+    voxelizer.domainOut2: collector.domainIn
+    voxelizer.cellsOut: collector.cellsIn
+    voxelizer.surfacePositionOut: collector.surfacePositionsIn
+    voxelizer.domainBoxOut: collector.domainBoxIn
+    distributor.geometryOut1: flow.geometryIn
+    distributor.geometryOut2: collector.geometryIn
+    flow.shearStressOut: collector.shearStressIn
+    collector.cellMaxStressOut: smc.cellMaxStressIn
+settings:
+  muscle_remote_log_level: DEBUG
+  muscle_data_in_dir: ./
+  muscle_data_out_dir: ./
+  smc.run_input_file: test_vessel.dat
+  smc.centerline_file: test_vessel_centerline.csv
+  flow.input_file: test_vessel.flow.dat
+  smc.log_file: smc.log
+  voxelizer.log_file: voxelizer.log
+  distributor.log_file: distributor.log
+  collector.log_file: collector.log
+  smc.dt: 1.0
+  smc.max_time: 721.0
+  flowdx: 0.03125
+  vessel_type: curved
+  smc.balloon_axial_protrusion: 1.0
+  smc.ci_weight_smc: 1.
+  smc.ci_weight_iel: 1.
+  smc.ci_weight_eel: 20.
+  smc.ci_weight_obstacle: 0.1
+  smc.ci_range_factor: 1.5
+  smc.ci_threshold_count: 20
+  smc.ecm_loose_threshold: 0.1
+  smc.ecm_prod_probability: 0.1
+  smc.smc_drug_conc_threshold: 1.
+  smc.smc_max_stress: 50.
+  smc.smc_max_strain: 0.6155
+  smc.smc_mean_rad: 0.015
+  smc.fenestration_probability: 0.06
+  smc.endo_endpoint: 15.0
+  smc.boundary_trim_distance: 1.0332452673857424
+  smc.Boundary_Inactivity_Range: 0.4
+  smc.run_boundary_mobility_x: 0.0
+  smc.run_boundary_mobility_y: 0.0
+  smc.run_boundary_mobility_z: 0.0
+  smc.run_convergence_level: 4e-2
+  smc.run_vtk_iter: 240
+  smc.run_dat_iter: 0
+  smc.run_vtp_scalars: typeId/state/age/clock/baFlag/ciFlag/drugConc/strain/wssMax/neoDist/noFlag/selectedForNOFlag
+  smc.run_vtp_vectors: pos0
+  flow.flow_velocity: 0.266
+  flow.convergence_limit: 1e-3
+  flow.bf_vtk_iter: 0
+  flow.bf_dat_iter: 24
+  flow.write_gifs: 0
+  voxelizer.smooth_Radius: 0.03
+  voxelizer.surface_iter: 0

@@ -12,7 +12,6 @@
 #include <limits>
 #include <memory>
 
-
 namespace absmc {
 
 class ZeroUnaryForce3D : public UnaryForce< AgentBase<3> >  {
@@ -27,7 +26,7 @@ public:
 };
 
 
-class ZeroBinaryForce3D : public BinaryForce< AgentBase<3> > {
+class ZeroBinaryForce3D : public BondForce< AgentBase<3> > {
 public:
     typedef AgentBase<3> agent_t;
     typedef Point<agent_t::nDim, double> point_t;
@@ -40,8 +39,18 @@ public:
         return 0.0;
     }
 
+    //calculate interaction force directly
+    double calculateForce (const double& firstR, const double& secondR, const double& distance, const double& bond_length){
+        return 0.0;
+    }
+
     //update interaction force between agent1 and agent2 for agent1
     point_t calculateForce(agent_t & agent1, agent_t & agent2) {
+        return point_t(0.,0.,0.);
+    }
+
+    //update interaction force between agent1 and agent2 for agent1
+    point_t calculateForce(agent_t & agent1, agent_t & agent2, const double& bond_length) {
         return point_t(0.,0.,0.);
     }
 };
@@ -236,44 +245,41 @@ private:
 
 
 /// This is applied during force integration to the otherwise immobile stent agents
-class UnaryStentDisplacementForce : public UnaryForce< AgentBase<3> >  {
+class UnaryRadialDisplacementForce : public UnaryForce< AgentBase<3> >  {
 public:
     typedef AgentBase<3> agent_t;
     typedef Point<agent_t::nDim, double> point_t;
     typedef EuclideanMetrics<agent_t::nDim, double> metrics_t;
 
 
-    UnaryStentDisplacementForce(double magnitude_, double cY_, double cZ_) :
+    UnaryRadialDisplacementForce(double magnitude_, double cY_, double cZ_) :
     magnitude (magnitude_) {
-        centerline = new Centerline<3>();
+        centerline = std::make_shared< Centerline<3> >();
         centerline->resetToAxis(-50., 50., cY_, cZ_, 100); // all reasonable vessels should be inside these coordinates
     }
 
-    UnaryStentDisplacementForce(double magnitude_, Centerline<3> & centerline_) :
-    magnitude (magnitude_), centerline(&centerline_) {
+    UnaryRadialDisplacementForce(double magnitude_, std::shared_ptr <Centerline<3> > centerline_) :
+    magnitude (magnitude_), centerline(centerline_) {
     }
 
     //move the agent away from the center
     point_t calculateForce(agent_t & agent) {
-        if ((agent.typeId == tObstacle3D)) {
-            point_t pos = agent.getPos();
-            // find the closest point on the vessel centerline and move away from it
-            const point_t center  = centerline->getClosest(pos);
+        point_t pos = agent.getPos();
+        // find the closest point on the vessel centerline and move away from it
+        const point_t center  = centerline->getClosest(pos);
 
-            // distance from symmetry axis
-            const double r = metrics.dist(center, pos);
+        // distance from symmetry axis
+        const double r = metrics.dist(center, pos);
 
-            // obstacles very close to the central axis are possibly not handled correctly;
-            // however these should not occur.
-            // dy/y = dr/r
-            return r > 0 ? magnitude * (pos-center) / r : point_t(0.,0.,0.);
-        }
-        return point_t(0.,0.,0.);
+        // obstacles very close to the central axis are possibly not handled correctly;
+        // however these should not occur.
+        // dy/y = dr/r
+        return r > 0 ? magnitude * (pos-center) / r : point_t(0.,0.,0.);
     }
 
 private:
     double magnitude;
-    Centerline<3> * centerline;
+    std::shared_ptr <Centerline<3> > centerline;
     metrics_t metrics;
 };
 
@@ -293,21 +299,27 @@ public:
         agentForces.resize(32000);
     }
 
+    void resizeForceVector(double size) {
+        agentForces.resize(size);
+    }
+
     void setForces(std::vector<point_t> const& agentForces_) {
         agentForces = agentForces_;
     }
 
     void setForce(agent_t const& agent, point_t force) {
-        if (agent.getId() >= agentForces.size())
-            agentForces.resize(2 * (agent.getId() + 1));
-        agentForces[agent.getId()] = force;
+        auto id = agent.getId();
+        if (id >= agentForces.size()) {
+            agentForces.resize(2 * (id + 1));
+        }
+        agentForces[id] = force;
     }
 
     point_t calculateForce(agent_t & agent) {
         return agentForces[agent.getId()];
     }
 
-private:
+protected:
     std::vector<point_t> agentForces;
 };
 
@@ -323,6 +335,20 @@ public:
     UnaryTrajectoryForce(double magnitude_, TrajectorySet<3> const& trajSet_, size_t k_ = 16) :
     magnitude (magnitude_), trajSet(trajSet_), k(k_) {
     }
+
+    void updateAllForces(std::vector<agent_t*> & agentVec, size_t nextStep){
+        /// resize necessary for parallel execution to avoid resizing inside the loop
+        resizeForceVector(agent_t::getMaxId());
+        /// enabling this results in a SEGFAULT for some large vessels. Should be reimplemented as a method of UnaryTrajectoryForce and tested.
+        #pragma omp parallel for schedule(dynamic, 10000)
+        for (size_t iAgent = 0; iAgent < agentVec.size(); iAgent++) {
+            agent_t* agent = agentVec[iAgent];
+            point_t direction = trajSet.getTrajByInitPosition(agent->getPos0(), nextStep, k);
+            //#pragma omp atomic write
+            agentForces[agent->getId()] = direction * magnitude;
+        }
+    }
+
 
     void updateForce(agent_t * agent, size_t nextStep){
         point_t direction = trajSet.getTrajByInitPosition(agent->getPos0(), nextStep, k);
@@ -410,6 +436,48 @@ protected:
 };
 
 
+/// Bond force has to define one extra function:
+/// calculate force for a given initial bond length
+class BondForce3D : public BondForce< AgentBase<3> > {
+public:
+    typedef AgentBase<3> agent_t;
+    typedef Point<agent_t::nDim, double> point_t;
+    typedef EuclideanMetrics<agent_t::nDim, double> metrics_t;
+
+    //Force > 0 means attraction
+    virtual double calculateForce(const double& firstR, const double& secondR, const double& distance, const double& bond_length) = 0;
+
+    virtual double calculateForce(const double& firstR, const double& secondR, const double& distance) {
+        return calculateForce(firstR, secondR, distance, firstR + secondR);
+    }
+
+    virtual point_t calculateForce(agent_t & agent1, agent_t & agent2, const double& bond_length) {
+        // distance (real dimensions)
+        const double distance = metrics.dist(agent1.pos, agent2.pos);
+        const double force = calculateForce(agent1.r, agent2.r, distance, bond_length);
+
+        if(force == 0.)
+            return point_t();
+
+        const double xproject = (agent2.pos[0]-agent1.pos[0]) / distance;
+        const double yproject = (agent2.pos[1]-agent1.pos[1]) / distance;
+        const double zproject = (agent2.pos[2]-agent1.pos[2]) / distance;
+
+        return point_t(xproject * force,
+                        yproject * force,
+                        zproject * force);
+    }
+
+    virtual point_t calculateForce(agent_t & agent1, agent_t & agent2) {
+        // distance (real dimensions)
+        const double distance = metrics.dist(agent1.pos, agent2.pos);
+        return calculateForce(agent1, agent2, distance);
+    }
+
+protected:
+    metrics_t metrics;
+};
+
 /// Composite binary force
 /// Forces are calculated in the same order as they are added to the composite rule object.
 class CompositeBinaryForce : public BinaryForce< AgentBase<3> > {
@@ -474,12 +542,57 @@ private:
 };
 
 
+/// Type-specific bond force; allows bond forces only
+/// Forces are defined for symmetric pairs of agent types
+class TypeSpecificBondForce : public BondForce< AgentBase<3> > {
+public:
+    typedef AgentBase<3> agent_t;
+    typedef BondForce< AgentBase<3> > bond_force_t;
+
+    TypeSpecificBondForce(bond_force_t* defaultForce) {
+        forceVector.resize(AgentTypeId_MAX * AgentTypeId_MAX, defaultForce);
+    }
+
+    // forces are added symmetrically for both (type1,type2) and (type2,type1)
+    void add(bond_force_t* force, AgentTypeId typeId1, AgentTypeId typeId2) {
+        forceVector[typeId1 * AgentTypeId_MAX + typeId2] =
+        forceVector[typeId2 * AgentTypeId_MAX + typeId1] = force;
+    }
+
+    void setDefaultType(AgentTypeId typeId) {
+        defaultType = typeId;
+    }
+
+    point_t calculateForce(agent_t & agent1, agent_t & agent2) {
+        return (forceVector[agent1.getTypeId() * AgentTypeId_MAX + agent2.getTypeId()])->calculateForce(agent1, agent2);
+    }
+
+    /// Returns interaction force for the default cell type
+    double calculateForce(const double& firstR, const double& secondR, const double& distance) {
+        return (forceVector[defaultType * AgentTypeId_MAX + defaultType])->calculateForce(firstR, secondR, distance);
+    }
+
+    point_t calculateForce(agent_t & agent1, agent_t & agent2, const double& bond_length) {
+        return (forceVector[agent1.getTypeId() * AgentTypeId_MAX + agent2.getTypeId()])->calculateForce(agent1, agent2, bond_length);
+    }
+
+    double calculateForce(const double& firstR, const double& secondR, const double& distance, const double& bond_length) {
+        return (forceVector[defaultType * AgentTypeId_MAX + defaultType])->calculateForce(firstR, secondR, distance, bond_length);
+    }
+
+private:
+    std::vector<bond_force_t*> forceVector; // vector of different pairwise forces; its size is AgentTypeId_MAX * AgentTypeId_MAX;
+    AgentTypeId defaultType = tAny;
+};
+
+
 class NeohookeanRepulsionForce3D : public BinaryForce3D {
 public:
 
-    /// Constructor; characteristic length scale L in real units.
-    NeohookeanRepulsionForce3D(double L_) :
-    L(L_) { }
+    NeohookeanRepulsionForce3D() { }
+
+    // Left for backward compatibility for now
+    NeohookeanRepulsionForce3D(double L_) { }
 
     //calculate interaction force between two agents
     //EVERYTHING IN REAL UNITS HERE
@@ -513,66 +626,63 @@ public:
             return f12rad;
         }
     }
-
-private:
-    double L;
 };
 
 /// Sigmoid SMC attraction force; attempt to replicate macroscopic behavoiur without bond breaking
-class SMCAttractionForce3D : public BinaryForce3D {
-public:
+//class SMCAttractionForce3D : public BinaryForce3D {
+//public:
 
-    /// Constructor; characteristic length scale L in real units.
-    SMCAttractionForce3D (double L_) :
-    L(L_) { }
+//    /// Constructor; characteristic length scale L in real units.
+//    SMCAttractionForce3D (double L_) :
+//    L(L_) { }
 
-    //calculate interaction force between two agents
-    //EVERYTHING IN REAL UNITS HERE
-    //Force > 0 means attraction
-    double calculateForce (const double& firstR, const double& secondR, const double& distance){
+//    //calculate interaction force between two agents
+//    //EVERYTHING IN REAL UNITS HERE
+//    //Force > 0 means attraction
+//    double calculateForce (const double& firstR, const double& secondR, const double& distance){
 
-        //INDENTATION OF SOFT MATTER BEYOND THE HERTZIAN REGIME
-        //NEOHOOKEAN
-        const double Rsum = firstR + secondR;
+//        //INDENTATION OF SOFT MATTER BEYOND THE HERTZIAN REGIME
+//        //NEOHOOKEAN
+//        const double Rsum = firstR + secondR;
 
-        if (distance <= Rsum) {
-            return 0;
-        }
-        else {
+//        if (distance <= Rsum) {
+//            return 0;
+//        }
+//        else {
 
-            //linear interaction force
-            /*const double linconst = 0.004; // N/mm; based on data for media in Holzapfel et al., 2005 // alternative: 0.06
-            const double maxdist = 1.3;
-            const double identdepth = fabs(Rsum - distance);
-            if (distance > maxdist * Rsum){
-                f12rad =  linconst * (maxdist - 1) * Rsum;
-            }
-            else {
-                f12rad =  linconst * identdepth;
-            }*/
+//            //linear interaction force
+//            /*const double linconst = 0.004; // N/mm; based on data for media in Holzapfel et al., 2005 // alternative: 0.06
+//            const double maxdist = 1.3;
+//            const double identdepth = fabs(Rsum - distance);
+//            if (distance > maxdist * Rsum){
+//                f12rad =  linconst * (maxdist - 1) * Rsum;
+//            }
+//            else {
+//                f12rad =  linconst * identdepth;
+//            }*/
 
-            // sigmoidal interaction force
-            const double strain = distance / Rsum;
-            const double c1 = 0.001 * 150;
-            const double c2 = 15.;
-            const double c3 = 11.5;
-            const double c4 = c1*(c2-c3) / sqrt((c2-c3)*(c2-c3) + 1); //shift value at strain = 1 to zero
-            const double t  = c3 * strain - c2;
-            const double sigmoid = c1 * t / sqrt(1 + t * t) + c4; // interaction force based on circumferential stress-strain curve for media tissue from Holzapfel et al., 2005; force in MPa = N/mm^2
-            // real tissue breaks at ~1.4 strain, this function starts to flatten out at this point
-            // adjusted for the number of contacts in a hexagonal lattice per mm^2
-            const double f12rad = sigmoid * (Rsum * Rsum) * 0.3536; // 1 / (2 * sqrt(2)) = 0.3536  // force in N
-            return f12rad;
-        }
-    }
+//            // sigmoidal interaction force
+//            const double strain = distance / Rsum;
+//            const double c1 = 0.001 * 150;
+//            const double c2 = 15.;
+//            const double c3 = 11.5;
+//            const double c4 = c1*(c2-c3) / sqrt((c2-c3)*(c2-c3) + 1); //shift value at strain = 1 to zero
+//            const double t  = c3 * strain - c2;
+//            const double sigmoid = c1 * t / sqrt(1 + t * t) + c4; // interaction force based on circumferential stress-strain curve for media tissue from Holzapfel et al., 2005; force in MPa = N/mm^2
+//            // real tissue breaks at ~1.4 strain, this function starts to flatten out at this point
+//            // adjusted for the number of contacts in a hexagonal lattice per mm^2
+//            const double f12rad = sigmoid * (Rsum * Rsum) * 0.3536; // 1 / (2 * sqrt(2)) = 0.3536  // force in N
+//            return f12rad;
+//        }
+//    }
 
-private:
-    double L;
-};
+//private:
+//    double L;
+//};
 
 
 /// Linear force calibrated for the average stress-atrain relationship used for animal models by POLIMI
-class LinearAttractionForce3D : public BinaryForce3D {
+class LinearAttractionForce3D : public BondForce3D {
 public:
 
     /// Constructor;
@@ -582,31 +692,20 @@ public:
     //calculate interaction force between two agents
     //EVERYTHING IN REAL UNITS HERE
     //Force > 0 means attraction
-    double calculateForce (const double& firstR, const double& secondR, const double& distance){
+    double calculateForce (const double& firstR, const double& secondR, const double& distance, const double& bond_length){
 
-        //INDENTATION OF SOFT MATTER BEYOND THE HERTZIAN REGIME
-        //NEOHOOKEAN
         const double Rsum = firstR + secondR;
 
-        if (distance <= Rsum) {
+        if (distance <= bond_length) {
             return 0;
         }
         else {
 
-            //linear interaction force
-            /*const double linconst = 0.004; // N/mm; based on data for media in Holzapfel et al., 2005 // alternative: 0.06
-            const double maxdist = 1.3;
-            if (distance > maxdist * Rsum){
-                f12rad =  linconst * (maxdist - 1) * Rsum;
-            }
-            else {
-                f12rad =  linconst * identdepth;
-            }*/
-
-            const double identdepth = fabs(Rsum - distance);
-            const double macro = c1 * identdepth / Rsum;
-            // adjusted for the number of contacts in a hexagonal lattice per mm^2
-            return macro * (Rsum * Rsum) * 0.3536; // 1 / (2 * sqrt(2)) = 0.3536
+            const double identdepth = fabs(bond_length - distance);
+            const double strain = identdepth / bond_length;
+            const double macro = c1 * strain;
+            // adjusted proportionately to the approx. number of contacts per mm^2
+            return macro * (Rsum * Rsum); // 1 / (2 * sqrt(2)) = 0.3536
         }
     }
 private:
@@ -614,73 +713,30 @@ private:
 };
 
 
-// f = c1 * l^4 + c2 * l
-class Linear4thPowerAttractionForce3D : public BinaryForce3D {
-public:
-
-    /// Constructor;
-    Linear4thPowerAttractionForce3D (double L_) :
-    L(L_) { }
-
-    //calculate interaction force between two agents
-    //EVERYTHING IN REAL UNITS HERE
-    //Force > 0 means attraction
-    double calculateForce (const double& firstR, const double& secondR, const double& distance){
-
-        const double Rsum = firstR + secondR;
-
-        if (distance <= Rsum) {
-            return 0;
-        }
-        else {
-
-            //linear interaction force
-            /*const double linconst = 0.004; // N/mm; based on data for media in Holzapfel et al., 2005 // alternative: 0.06
-            const double maxdist = 1.3;
-            if (distance > maxdist * Rsum){
-                f12rad =  linconst * (maxdist - 1) * Rsum;
-            }
-            else {
-                f12rad =  linconst * identdepth;
-            }*/
-
-            const double identdepth = fabs(Rsum - distance);
-            const double c1 = 0.001 * 12000;
-            const double c2 = 0.001 * 50; // linear component for small deformations
-            const double macro = c1 * (identdepth / Rsum) * (identdepth / Rsum) * (identdepth / Rsum) * (identdepth / Rsum) + c2 * (identdepth / Rsum);
-            // adjusted for the number of contacts in a hexagonal lattice per mm^2
-            return macro * (Rsum * Rsum) * 0.3536; // 1 / (2 * sqrt(2)) = 0.3536
-        }
-    }
-private:
-    double L;
-};
-
-
 /// 6th power polynomial. Used for media and adventitia in POLIMI three-layer model
-class Poly6thPowerAttractionForce3D : public BinaryForce3D {
+class Poly6thPowerAttractionForce3D : public BondForce3D {
 public:
 
     /// Constructor; coefficients from 1th to 6th power
     /// the scaling coefficient is empirical, introduced to get the desired macroscopic behaviour
-    Poly6thPowerAttractionForce3D (double c1, double c2, double c3, double c4, double c5, double c6) :
+    Poly6thPowerAttractionForce3D (const double c1, const double c2, const double c3, const double c4, const double c5, const double c6) :
         c1(c1), c2(c2), c3(c3), c4(c4), c5(c5), c6(c6)
     { }
 
     //calculate interaction force between two agents
     //EVERYTHING IN REAL UNITS HERE [mm, N, MPa]
     //Force > 0 means attraction
-    double calculateForce (const double& firstR, const double& secondR, const double& distance){
+    double calculateForce (const double& firstR, const double& secondR, const double& distance, const double& bond_length){
 
         const double Rsum = firstR + secondR;
 
-        if (distance <= Rsum) {
+        if (distance <= bond_length) {
             return 0;
         }
         else {
-            const double identdepth = fabs(Rsum - distance);
+            const double identdepth = fabs(bond_length - distance);
 
-            const double strain = identdepth / Rsum;
+            const double strain = identdepth / bond_length;
             const double strain2 = strain * strain;
             const double strain3 = strain * strain2;
             const double strain4 = strain * strain3;

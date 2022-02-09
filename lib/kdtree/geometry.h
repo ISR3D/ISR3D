@@ -69,6 +69,14 @@ bool operator==(Point<k, float_t> const& a, Point<k, float_t> const& b) {
 }
 
 template<size_t k, typename float_t>
+inline Point<k, float_t> operator+(Point<k, float_t> lhs, Point<k, float_t> const& rhs)
+{
+    lhs += rhs;
+    return lhs;
+}
+
+
+template<size_t k, typename float_t>
 inline Point<k, float_t> operator-(Point<k, float_t> lhs, Point<k, float_t> const& rhs)
 {
     lhs -= rhs;

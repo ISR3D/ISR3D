@@ -11,7 +11,7 @@
 namespace absmc {
 
 template<size_t nDim>
-size_t NBWriter<nDim>::writeFile(std::vector<index_vec_t> const& neighbourhoods, std::string const& fileName)
+size_t NBWriter<nDim>::writeFile(std::vector<index_vec_t> const& neighbourhoods, double length, std::string const& fileName)
 {
     std::ofstream ofstr (fileName.c_str());
     if (!ofstr) {
@@ -22,13 +22,18 @@ size_t NBWriter<nDim>::writeFile(std::vector<index_vec_t> const& neighbourhoods,
     const size_t numNbh = neighbourhoods.size();
     for (size_t iNbh=0; iNbh<numNbh; iNbh++) {
         index_vec_t const& curNeighbourhood = neighbourhoods[iNbh];
-        serializeNeighbours(curNeighbourhood, ofstr);
+
+        const size_t numNb= curNeighbourhood.size();
+        std::vector<double> lengths;
+        lengths.assign (numNb,length);
+
+        serializeNeighbours(curNeighbourhood, lengths, ofstr);
     }
     return numNbh;
 }
 
 template<size_t nDim>
-size_t NBWriter<nDim>::writeFile(AgentContainer<nDim> const& agentContainer, std::string const& fileName, bool writeBonds)
+size_t NBWriter<nDim>::writeFile(AgentContainer<nDim> const& agentContainer, std::string const& fileName)
 {
     std::ofstream ofstr (fileName.c_str());
     if (!ofstr) {
@@ -36,7 +41,6 @@ size_t NBWriter<nDim>::writeFile(AgentContainer<nDim> const& agentContainer, std
         return 0;
     }
 
-    typedef AgentBase<nDim> agent_t;
     std::vector<agent_t*> const& agents = agentContainer.getAgentVector();
     const size_t nAgents = agents.size();
 
@@ -54,23 +58,25 @@ size_t NBWriter<nDim>::writeFile(AgentContainer<nDim> const& agentContainer, std
 
     for (size_t iAgent=0; iAgent<nAgents; iAgent++) {
 
-        std::vector<agent_t*> const& nbPointers = writeBonds ? agents[iAgent]->getBonds() : agents[iAgent]->getNeighbours();
+        bond_vec_t const& nbPointers = agents[iAgent]->getBonds();
         index_vec_t nbIndices;
+        std::vector<double> lengths;
 
         const size_t numNb= nbPointers.size();
         for (size_t iNb=0; iNb<numNb; iNb++) {
-            agent_t* curP = nbPointers[iNb];
+            agent_t* curP = nbPointers[iNb].other;
             const size_t curId = curP->getId();
             nbIndices.push_back(agentPos[curId]);
+            lengths.push_back(nbPointers[iNb].length0);
         }
 
-        serializeNeighbours(nbIndices, ofstr);
+        serializeNeighbours(nbIndices, lengths, ofstr);
     }
     return nAgents;
 }
 
 template<size_t nDim>
-void NBWriter<nDim>::serializeNeighbours(index_vec_t const& neighbours, std::ostream & ostr)
+void NBWriter<nDim>::serializeNeighbours(index_vec_t const& neighbours, std::vector<double> lengths, std::ostream & ostr)
 {
     const size_t numNb= neighbours.size();
     /// write indices, separated by colon
@@ -80,20 +86,24 @@ void NBWriter<nDim>::serializeNeighbours(index_vec_t const& neighbours, std::ost
     /// always write a least one colon, so that there are no empty lines
     if (numNb==0) { ostr << ":"; }
     ostr << std::endl;
+
+    /// same for bond lengths
+    for (size_t iNb=0; iNb<numNb; iNb++) {
+        ostr  << std::setprecision (5) << lengths[iNb] << ":";
+    }
+    /// always write a least one colon, so that there are no empty lines
+    if (numNb==0) { ostr << ":"; }
+    ostr << std::endl;
 }
 
 template<size_t nDim>
-size_t NBReader<nDim>::readFile(std::string const& fileName, AgentContainer<nDim> & agentContainer, bool doClear, bool readBonds)
+size_t NBReader<nDim>::readFile(std::string const& fileName, AgentContainer<nDim> & agentContainer, bool doClear)
 {
     std::ifstream ifstr(fileName.c_str());
     if (!ifstr) {
         std::cout << "Cannot open file " << fileName << " for reading."  << std::endl;
         return 0;
     }
-
-    typedef AgentBase<nDim> agent_t;
-    typedef typename AgentBase<nDim>::nb_vec_t nb_vec_t;
-    typedef std::vector<size_t> index_vec_t;
 
     std::vector<agent_t*> const& agents = agentContainer.getAgentVector();
 
@@ -113,15 +123,17 @@ size_t NBReader<nDim>::readFile(std::string const& fileName, AgentContainer<nDim
         util::tokenizeAndConvert<size_t>(line, nbIndices, ':');
         const size_t numNb = nbIndices.size();
 
+        std::getline(ifstr, line);
+        std::vector<double> lengths;
+        util::tokenizeAndConvert<double>(line, lengths, ':');
+
         /// get reference to current agent's neighbourhood
-        assert(numRead < agents.size());
-        nb_vec_t & nbPointers = readBonds ? agents[numRead]->getBonds() : agents[numRead]->getNeighbours();
+        bond_vec_t & nbPointers = agents[numRead]->getBonds();
         if (doClear) { nbPointers.clear(); }
 
         /// add pointers to neighbourhood of current agent
         for (size_t iNb=0; iNb<numNb; iNb++) {
-            assert(nbIndices[iNb] < agents.size());
-            nbPointers.push_back(agents[nbIndices[iNb]] );
+            agents[numRead]->addBond(agents[nbIndices[iNb]], lengths[iNb], false);
         }
         numRead++;
     }

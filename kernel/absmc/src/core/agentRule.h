@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <cassert>
+#include <memory>
 
 namespace absmc {
 
@@ -29,7 +30,7 @@ public:
     typedef typename Agent::base_t agent_base_t;
     typedef AgentRule<Agent> rule_t;
 
-    void add(rule_t* rule) {
+    void add(std::shared_ptr<rule_t> rule) {
         assert(rule);
         ruleVector.push_back(rule);
     }
@@ -43,7 +44,7 @@ public:
     }
 
 private:
-    std::vector<rule_t*> ruleVector;
+    std::vector< std::shared_ptr<rule_t> > ruleVector;
 };
 
 } // end namespace absmc

@@ -68,9 +68,9 @@ namespace absmc {
             double contactWeight = wSMC*numSMC + wIEL*numIEL + wEEL*numEEL + wObstacle*numObstacle + wSMC*numECM; //TODO: separate weight for ECM
             if (contactWeight > contactThreshold) {
                 agent.setCiFlag(true);
-                return;
+            //    return;
             }
-            agent.setCiFlag(false);
+            //agent.setCiFlag(false);
         }
 
     private:
@@ -81,49 +81,30 @@ namespace absmc {
 
 
 
-
+    /// For endothelium-covered cells, calculate the NO concentration and set the flag according to WSS
     class SMCNitricOxideRule3D : public AgentRule<SMC3D> {
     public:
         typedef SMC3D agent_t;
         typedef AgentBase<3> agent_base_t;
         typedef Point<3, double> point_t;
 
-        //probability range from 0 to 1, per hour
-        SMCNitricOxideRule3D(double newEndothelialProbability_, double dt_)
-        : newEndothelialProbability(newEndothelialProbability_), dt(dt_) { }
-
-        double getEndProb() const { return newEndothelialProbability; }
-        void setNewEndothelialProbability(double prob) {newEndothelialProbability = prob;}
+        SMCNitricOxideRule3D() { }
 
         virtual void apply(size_t iAgent, agent_t & agent, std::vector<agent_base_t*> & agentsCreated,
                             std::vector<agent_base_t*> & agentsDeleted) const {
 
-            double wss = agent.getWssMax()*10;// value in dynes/cm2 from value in Pa
-            double nitricValue = 0.0000;
-            double totalEndProb = newEndothelialProbability; //this is the probability with respect to timestep length
+            const double wss = agent.getWssMax()*10.;// value in dynes/cm2 from value in Pa
+            double nitricValue = 0.;
             //check if endothelium grows over this cell
-            if (!agent.getSelectedFlag()) {
-                if (dt > 1.0) {
-                    //calculate probability over several 1-hour steps, assuming probability is small
-                    totalEndProb *= dt;
-                }
-                if (util::Random::getNext(1.0) <= totalEndProb)
-                    agent.setSelectedFlag(true); //keep count on who has been selected
-            }
             if (agent.getSelectedFlag()) {
                 if (wss >= 0.0 && wss <= 10.5) {
                     nitricValue = 0.000366*wss;    // since the reference fig 2b, Acta physiologica paper, 2009, 197, 99–106
                                                 //starts from wss=10.5, so we extracted a equation of a linear line between 0
                                                 // and 10.5 to capture the effects of low wss.
                                                 //nitricValue in nmol/mm3 aka millimolar
-                    if (nitricValue < 1e-14)
-                        nitricValue = 1e-14;
                 } else if (wss > 10.5) //agent.wss_max > 1.05
                     nitricValue = (0.00052*(wss*wss))-(0.011*wss)+0.062;    // with reference to fig 2b, above A. Phys. publication
                                                                             //>=0.0038 fro WSS > 10.5 dynes/cm2
-            }
-            else { // if the cell is not covered by endothelium there is no NO
-                nitricValue = 1e-20;
             }
             agent.setNitricConc(nitricValue);
 
@@ -138,13 +119,8 @@ namespace absmc {
                                         //This goes with Hannan's version
                                         //and is closer to the rough experimental value of 0.5 Pa for arrest
                 agent.setNOFlag(true);
-            else
-                agent.setNOFlag(false);
         }
 
-    private:
-        double newEndothelialProbability;
-        double dt;
     };
 
 
@@ -211,7 +187,6 @@ namespace absmc {
         }
 
 
-
         virtual void apply(size_t iAgent, agent_t & agent, std::vector<agent_base_t*> & agentsCreated, std::vector<agent_base_t*> & agentsDeleted) const {
 
             const int tCheckPoint = 0;  // G0 checkpoint (at beginning of cell cycle)
@@ -230,7 +205,7 @@ namespace absmc {
                     if (t > 0) {
                         agent.setState(SMC3D::G0);
                         agent.setClock(tCheckPoint);
-                        agent.setBaFlag(false);
+                        //agent.setBaFlag(false);
                     }
                 }
                 // otherwise enter G1 and increase clock
@@ -337,18 +312,18 @@ namespace absmc {
 
             // for all bonds
             auto& bonds = agent.getBonds();
-            for (auto& bondPtr : bonds) {
+            for (auto& bond : bonds) {
 
                 // compute equilibrium and current distance and strain
-                const point_t nbPos  = bondPtr->getPos();
+                const point_t nbPos  = bond.other->getPos();
                 const double distNorm  = norm<3>(pos - nbPos);
-                const double equilibriumDist = bondPtr->getR() + agent.getR();
+                const double equilibriumDist = bond.other->getR() + agent.getR();
                 const double strain = (distNorm-equilibriumDist) / equilibriumDist;
 
                 // if strain is larger than the threshold, break the bond
                 if (strain > maxStrain) {
                     //std::cout << "breaking SMC bond: pairwise strain=" << strain << " > maxStrain" << std::endl;
-                    agent.breakBond(bondPtr);
+                    agent.breakBond(bond.other);
                 }
             }
 
@@ -367,55 +342,36 @@ namespace absmc {
         typedef AgentBase<3> agent_base_t;
         typedef Point<3, double> point_t;
 
-        ECMProductionRule3D(double maxStrain_, Centerline<3> & centerline_) : maxStrain(maxStrain_), centerline(&centerline_) { }
+        ECMProductionRule3D(const double maxStrain_, const double ecmProductionProbability_,  Centerline<3> & centerline_) :
+            maxStrain(maxStrain_), ecmProductionProbability(ecmProductionProbability_), centerline(&centerline_) { }
 
         virtual void apply(size_t iAgent, agent_t & agent, std::vector<agent_base_t*> & agentsCreated, std::vector<agent_base_t*> & agentsDeleted) const {
 
             if(agent.getStrain() == 0) {
                 // strain computation ...
                 const point_t pos = agent.getPos();
-                const point_t pos0 = agent.getPos0();
 
                 // for all bonds of type SMC3D
-                SMC3D::nb_vec_t const& neighbours = agent.getBonds();
-                const size_t nNb = neighbours.size();
-                double strain = 0.0;
-                int num = 0;
+                SMC3D::bond_vec_t const& bonds = agent.getBonds();
+                const size_t nNb = bonds.size();
+                size_t num_strains = 0;
+                double strain_acc = 0.; //strain accumulator
                 for (size_t iNb=0; iNb<nNb; iNb++) {
 
-                    if (neighbours[iNb]->getTypeId() != tSMC3D) continue;
+                    // if (bonds[iNb].other->getTypeId() != tSMC3D) continue;
+                    if (bonds[iNb].length0 < 0.001) continue;
 
                     // compute initial and current distance and strain
-                    const point_t nbPos  = neighbours[iNb]->getPos();
-                    const point_t nbPos0 = neighbours[iNb]->getPos0();
-
-                    point_t dist, dist0;
-                    //for (size_t iDim=0; iDim<3; iDim++) {
-                    dist  = pos  - nbPos;
-                    dist0 = pos0 - nbPos0;
-                    //}
-                    const double distNorm  = norm<3>(dist);
-                    const double distNorm0 = norm<3>(dist0);
-
-                    if (distNorm0 < 0.001) continue;
-
-                    if ((distNorm-distNorm0) / distNorm0 == std::numeric_limits<double>::infinity()) {
-                        std::cout << "Abnormal strain, distances are " << distNorm << " (" << dist[0] << " " << dist[1] << " " << dist[2] << ") and "
-                                                                       << distNorm0 << " (" << dist0[0] << " " << dist0[1] << " " << dist0[2] << ")"
-                                                                       << std::endl;
+                    const point_t nbPos  = bonds[iNb].other->getPos();
+                    const double distNorm  = norm<3>(pos - nbPos);
+                    const double strain = (distNorm - bonds[iNb].length0) / bonds[iNb].length0;
+                    if (strain > 0.) {
+                        strain_acc += strain;
+                        ++num_strains;
                     }
-
-                    strain += distNorm / distNorm0 - 1.0;
-                    ++num;
-
                 }
 
-                strain = num > 0 ? strain / (double)num : 0.0;
-
-                if (strain  > 9000.0) {
-                        std::cout << "Abnormal strain, strain is " << strain << std::endl;
-                        std::cout << "Number of neighbours is " << num << std::endl;
-                }
+                double strain = num_strains > 0 ? strain_acc / (double)num_strains : 0.;
 
                 if (std::isinf(strain))
                     strain = 0.0;
@@ -433,35 +389,31 @@ namespace absmc {
                 //ensure the motility of synthetic cells; clean up the neighbours outside the interaction raduis
                 agent.clearNeighbours();
 
-                double ecmProductionProbability = 0.1; //0.04; //new ECM agent each 25 hours avg.
                 if (util::Random::getNext(1.0) <= ecmProductionProbability) {
                     //spawn ECM;
                     const double newR = 0.015;
-                    const double shift = 0.8*newR;
+                    const double shift = 0.8 * newR;
                     const point_t pos = agent.getPos();
-
-                    //random ECM placement
-                /*  const double thetaC = util::Random::getNext(math::pi);
-                    const double phiC   = util::Random::getNext(2.0*math::pi);
-
-                    const double dXC = shift * sin(thetaC) * cos(phiC);
-                    const double dYC = shift * sin(thetaC) * sin(phiC);
-                    const double dZC = shift * cos(thetaC);
-                */
 
                     //ECM placement away from X axis (away from the centerline)
                     const point_t center  = centerline->getClosest(pos);
                     const point_t yzProjection = (pos - center);
                     const double yzProjectionNorm  = norm<3>(yzProjection);
 
+                    // place the cell in a semi-spere centered around the line
+                    // here, we convert the line to polar coordinates, and add a random component (-pi/2, +pi/2)
+
                     const double xVec = yzProjection[0] / yzProjectionNorm;
                     const double yVec = yzProjection[1] / yzProjectionNorm;
                     const double zVec = yzProjection[2] / yzProjectionNorm;
 
-                    // add a small dispersion to avoid lines of ECM blobs
-                    const double dXC = shift * (xVec + (util::Random::getNext(0.4)-0.2));
-                    const double dYC = shift * (yVec + (util::Random::getNext(0.4)-0.2));
-                    const double dZC = shift * (zVec + (util::Random::getNext(0.4)-0.2));
+                    // "zVec / norm", but the norm = 1
+                    const double theta = acos(zVec) - math::pi/2. + util::Random::getNext(math::pi);
+                    const double phi   = atan2(yVec, xVec) - math::pi/2. + util::Random::getNext(math::pi);
+
+                    const double dXC = shift * sin(theta) * cos(phi);
+                    const double dYC = shift * sin(theta) * sin(phi);
+                    const double dZC = shift * cos(theta);
 
                     const point_t posC(pos[0]+dXC, pos[1]+dYC, pos[2]+dZC);
 
@@ -479,7 +431,8 @@ namespace absmc {
         }
 
     private:
-        double maxStrain;
+        const double maxStrain;
+        const double ecmProductionProbability; //0.04; //new ECM agent each 25 hours avg.
         Centerline<3> * centerline;
     };
 

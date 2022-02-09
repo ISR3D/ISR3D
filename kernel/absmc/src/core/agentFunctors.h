@@ -4,6 +4,7 @@
 #include "core/geometry.h"
 #include "core/agentRule.h"
 #include "core/euclideanMetrics.h"
+#include "core/neighbourCache.h"
 
 namespace absmc {
 
@@ -19,6 +20,23 @@ public:
     }
 private:
     point_t mobility;
+};
+
+/// Functor setting the strain of the sample (second argument) to the specified values.
+/// parameter is the desired values of strain in x, y, or z direction, based on pos0
+/// If you want to apply it after the simulation start, consider resetting pos0 first
+template<class Agent>
+class FApplyEngineeringStrain  : public std::binary_function<size_t, Agent, void> {
+public:
+    typedef Point<Agent::nDim, double> point_t;
+
+    FApplyEngineeringStrain(double strain_, size_t axis_ = 0) : strain (strain_), axis(axis_) { }
+    void operator()(size_t id, Agent* agent) {
+        agent->setCoord(agent->getPos0()[axis] * (1 + strain) , axis);
+    }
+private:
+    double strain;
+    size_t axis;
 };
 
 
@@ -44,14 +62,14 @@ public:
     typedef AgentBase<Agent::nDim> agent_base_t;
     typedef AgentRule<Agent> rule_t;
 
-    FSetAgentRule(rule_t* rule_) : rule(rule_) { }
+    FSetAgentRule(std::shared_ptr<rule_t> rule_) : rule(rule_) { }
 
     void operator()(size_t id, agent_base_t* agentBase) {
         agent_t* agent = dynamic_cast<agent_t*>(agentBase);
         if (agent) { agent->setAgentRule(rule); }
     }
 private:
-    rule_t* rule;
+    std::shared_ptr<rule_t> rule;
 };
 
 

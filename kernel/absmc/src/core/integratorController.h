@@ -13,6 +13,13 @@ public:
     virtual ~IntegratorController() { }
 
     virtual bool stop(int iter, double time, double dt, util::SimpleStatistics const& residualStatistics) = 0;
+
+//    virtual void setNewMaxTimeStep(double& maxTimeStep, double residualOld, double residualNew, ) {
+//        if ((max_residual * 1.1 < residualStatistics.getMax()) && displMax > 0.5 * maxDispl) {
+//            maxTimeStep = maxTimeStep * 0.618;
+//        }
+//    }
+
 };
 
 

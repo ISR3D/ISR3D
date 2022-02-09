@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 
     /// Read bonds
     const std::string bondFileName = createFileName(configDir, "stage2."+baseName+"_nb", "dat");
-    NBReader<3>::readFile(bondFileName, agents, true, true);
+    NBReader<3>::readFile(bondFileName, agents, true);
 
     /// set agents at longitudinal (x) domain boundaries immobile;
     const double lX = config().getValue<double>("lX");

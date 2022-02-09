@@ -21,8 +21,7 @@ public:
     static void generateSmoothCylinder(std::vector<point_t> & points, double s, double lX, double r1, double r2,
                                        std::vector<index_vec_t> * neighbourhoods=0);
 
-    static void generateSimpleStent(std::vector<point_t> & points, double s, double lX, double r, int nStruts, double spiralStep);
-    static void generateSimpleStrut(std::vector<point_t> & points, double s, double lX, double r);
+    static void generateSimpleStent(std::vector<point_t> & points, double spacing, double lX, double r, int nStruts, double helixPitch, double strutHeight, double strutWidth);
 
     static void shufflePositions(std::vector<point_t> & points, double meanShift, double sigmaShift);
     static void shiftPositions(std::vector<point_t> & points, double dX, double dY, double dZ);

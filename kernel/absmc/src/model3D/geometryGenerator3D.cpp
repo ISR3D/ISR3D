@@ -1,6 +1,7 @@
 #include <cassert>
 #include <iostream>
 #include <algorithm>
+#include <cmath>
 
 #include "model3D/geometryGenerator3D.h"
 #include <util/random.h>
@@ -356,40 +357,37 @@ void GeometryGenerator3D::generateHexagonalMonolayer(std::vector<point_t> & poin
 }
 
 
-//Generate stent from two sets of spirals, similar to WALLSTENT design
-void GeometryGenerator3D::generateSimpleStent(std::vector<point_t> & points, double dr, double lX, double r, int nStruts, double spiralStep)
+//Generate stent from two sets of spirals, similar to WALLSTENT design (or a simplified version of Palmaz-Schatz stent)
+void GeometryGenerator3D::generateSimpleStent(std::vector<point_t> & points, double spacing, double lX, double r, int nStruts, double helixPitch, double strutHeight, double strutWidth)
 {
     assert(dr>0 && lX>0);
     assert(r>=0);
     assert(nStruts>0);
 
     // computations as for the drh cuboid
-    const double dX = dr * sqrt(2.0/3.0);
-    int nI = 1 + (int)floor(lX/dX);
-    if (nI % 2 == 0) { nI=nI-1; }
-    const double lXX = nI*dX;
+    const int nI = (int)ceil(lX/spacing);
 
-    // number of obstacles in longitudinal (x-) direction
-    //const int nII = 1+(int)floor(lXX/s);
-    const int nII = 1+2*(int)floor(lXX/dr);
+    // strut width and height in cell number:
+    const int nw = (int)ceil(strutWidth / spacing / sin(atan2(helixPitch, math::pi*r)));
+    const int nh = (int)ceil(strutHeight / spacing);
 
     const double dPhi = 2*math::pi / nStruts;
 
     // generate 2 * nStruts spiral struts
     double x, y, z;
     for (int iStrut=0; iStrut<nStruts; iStrut++) {
-        for (int i=-2; i<3; i++) {
-            for (int j=0; j<4; j++) {
+        for (int i = - ceil(nw / 2.); i < ceil(nw / 2.); i++) {
+            for (int j = 0; j < nh; j++) {
                 // generate spiral struts at angle phi
-                for (int iXX=0; iXX<nII; iXX++) {
-                    x = iXX*dr/2.;
-                    const double phi1 = (iStrut+0.5) * dPhi + i*dr + (x/spiralStep)* 2*math::pi;
-                    const double phi2 = (iStrut+0.5) * dPhi + i*dr - (x/spiralStep)* 2*math::pi;
-                    y = (r-j*dr/2) * sin(phi1);
-                    z = (r-j*dr/2) * cos(phi1);
+                for (int k = 0; k < nI; k++) {
+                    x = k * spacing;
+                    const double phi1 = (iStrut+0.5) * dPhi + i * spacing + (x/helixPitch)* 2*math::pi;
+                    const double phi2 = (iStrut+0.5) * dPhi + i * spacing - (x/helixPitch)* 2*math::pi;
+                    y = (r-j*spacing) * sin(phi1);
+                    z = (r-j*spacing) * cos(phi1);
                     points.push_back(point_t(x, y, z) );
-                    y = (r-j*dr/2) * sin(phi2);
-                    z = (r-j*dr/2) * cos(phi2);
+                    y = (r-j*spacing) * sin(phi2);
+                    z = (r-j*spacing) * cos(phi2);
                     points.push_back(point_t(x, y, z) );
                 }
             }

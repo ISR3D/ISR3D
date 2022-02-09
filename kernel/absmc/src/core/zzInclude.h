@@ -14,6 +14,7 @@
 #include "agentFunctors.h"
 #include "agentPredicates.h"
 #include "agentRule.h"
+#include "agentSolver.h"
 #include "centerline.h"
 #include "currentNeighbourDetector.h"
 #include "euclideanMetrics.h"

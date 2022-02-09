@@ -18,6 +18,9 @@ class AgentBase {
     template<size_t nDim>
     friend class AgentContainer;
 
+    template<size_t nDim>
+    friend class NBReader;
+
     template<typename AgentType>
     friend class Integrator;
 
@@ -25,6 +28,7 @@ class AgentBase {
     friend class RungeKuttaIntegratorMPI;
 
     friend class BinaryForce3D;
+    friend class BondForce3D;
 
     friend class Bilinear3D;
     friend class Wmlc3D;
@@ -36,17 +40,41 @@ class AgentBase {
     friend class GrowthFactorForce3D;
     friend class UnaryStentDisplacementForce;
 
+    class Bond {
+    public:
+        AgentBase* other;  //pointer to the other agent
+        double length0;    //strain-free bond length
+
+        Bond (AgentBase* other_, double length0_)
+            : other(other_), length0(length0_) {}
+
+        // get the bond's length
+        // awkward that you have to pass this agent's pos here;
+        // otherwise a pointer to this agent is needed for each bond,
+        // and that bloats the memory
+        double getDistance(Point<nDim_, double> pos) {
+            return norm<nDim>(other->pos - pos);
+        }
+
+    };
+
+
 public:
     typedef Point<nDim_, double> point_t;
     typedef std::vector<AgentBase*> nb_vec_t;
+    typedef std::vector<Bond> bond_vec_t;
+
     static const size_t nDim = nDim_;
-public:
+    static inline size_t _id = 0;
 
     AgentBase(AgentTypeId typeId_, point_t pos_, point_t  pos0_, double r_, point_t mobility_)
         : typeId(typeId_), pos(pos_), pos0(pos0_), r(r_), strain(0.0), wssOsi(0.0), wssMax(0.0) {
         setMobility(mobility_); //not a pure set
-        static size_t _id = 0;
         id = _id++;
+    }
+
+    static size_t getMaxId() {
+        return _id;
     }
 
     virtual AgentBase* clone() const = 0;
@@ -64,6 +92,7 @@ public:
 
     point_t const& getPos() const { return pos; }
     void setPos(point_t const& newPos) { pos = newPos; }
+    void setCoord(double const& newCoord, size_t const axis) { pos[axis] = newCoord; }
 
     point_t const& getPos0() const { return pos0; }
     void setPos0(point_t const& newPos0) { pos0 = newPos0; }
@@ -87,6 +116,10 @@ public:
             if(mobility[iDim] != 0.0)
                 isMobile = true;
         }
+    }
+
+    inline bool getMobile() {
+        return isMobile;
     }
 
     // whether the agent is affected by other agents in force calculation
@@ -172,8 +205,8 @@ public:
     nb_vec_t & getNeighbours() { return neighbours; }
     nb_vec_t const& getNeighbours() const { return neighbours; }
 
-    nb_vec_t & getBonds() { return bonds; }
-    nb_vec_t const& getBonds() const { return bonds; }
+    bond_vec_t & getBonds() { return bonds; }
+    bond_vec_t const& getBonds() const { return bonds; }
 
     double getWssOsi() const { return wssOsi; }
     void setWssOsi(double wssOsi_) { wssOsi = wssOsi_; }
@@ -207,9 +240,12 @@ public:
         else if (quantity=="forceY") { assert(nDim>=2); return force[1]; }
         else if (quantity=="forceZ") { assert(nDim>=3); return force[2]; }
         else if (quantity=="stressNorm") { return norm<nDim>(stress); }
-        else if (quantity=="stressX") return stressmatrix[0];
-        else if (quantity=="stressY") { assert(nDim>=2); return stressmatrix[3]; }
-        else if (quantity=="stressZ") { assert(nDim>=3); return stressmatrix[4]; }
+        else if ((quantity=="stressX") || (quantity=="stressXX")) return stressmatrix[0];
+        else if ((quantity=="stressY") || (quantity=="stressYY")) return stressmatrix[3];
+        else if ((quantity=="stressZ") || (quantity=="stressZZ")) { assert(nDim>=3); return stressmatrix[4]; }
+        else if (quantity=="stressXY") return stressmatrix[1];
+        else if (quantity=="stressXZ") { assert(nDim>=3); return stressmatrix[2]; }
+        else if (quantity=="stressYZ") { assert(nDim>=3); return stressmatrix[5]; }
         else if (quantity=="pressure") { assert(nDim>=3); return (- (stressmatrix[0] + stressmatrix[3] + stressmatrix[4]) / 3); }
         else if (quantity=="numNeighbours") return neighbours.size();
         else if (quantity=="numBonds") return bonds.size();
@@ -241,8 +277,8 @@ public:
 
     /// This method removes the agent from all bond lists and clears its own list
     void clearBonds() {
-        for (typename nb_vec_t::iterator it = bonds.begin() ; it != bonds.end(); ++it) {
-            (*it)->removeBond(this);
+        for (typename bond_vec_t::iterator it = bonds.begin() ; it != bonds.end(); ++it) {
+            (it->other)->removeBond(this);
         }
         bonds.clear();
     }
@@ -257,7 +293,6 @@ public:
         removeBond(other);
     }
 
-
     /// This methods adds the cells from the neighbour list to bonds, up to maxBonds total bonds, located no further than maxDistance
     void addNeighboursToBonds(bool check = true, size_t maxBonds = std::numeric_limits<size_t>::max(), double maxDistance = std::numeric_limits<double>::max()) {
         size_t numBonds = bonds.size();
@@ -271,8 +306,8 @@ public:
         for (auto& neighPtr : neighbours) {
             bool notAdded = true;
             if(check) {
-                for (auto& bondPtr : bonds) {
-                    if (neighPtr == bondPtr) {
+                for (auto& bond : bonds) {
+                    if (neighPtr == bond.other) {
                         notAdded = false;
                         break;
                     }
@@ -282,10 +317,10 @@ public:
                 toBeAdded.insert(neighPtr);
             }
         }
-        for (auto& bond : toBeAdded) {
-            if ((numBonds >= maxBonds) || (norm<nDim>(bond->pos - this->pos) > maxDistance)) break;
-            if (bond->bonds.size() < maxBonds ) {
-                addBond(bond);
+        for (auto& candidate : toBeAdded) {
+            if ((numBonds >= maxBonds) || (norm<nDim>(candidate->pos - this->pos) > maxDistance)) break;
+            if (candidate->bonds.size() < maxBonds ) {
+                addBond(candidate);
                 numBonds++;
             }
         }
@@ -302,10 +337,11 @@ public:
     }
 
     size_t getId() const { return id; }
-    void setId(size_t i) { id = i; } //probably a Very Bad Idea to call this directly, since it can lead to duplicate IDs
+    void setId(size_t i) { id = i; _id = std::max(_id, i+1);} //usually a Very Bad Idea to call this directly, since it can lead to duplicate IDs; used for reading agents from file
     //int getGhostIndex() { return ghostindex; }
     //void setGhostIndex(int i) { ghostindex = i; }
 private:
+
     //remove neighbour by address. Note that calling this by itself breaks the symmetry of neighbour lists
     void removeNeighbour(AgentBase* index) {
         for (typename nb_vec_t::iterator it = neighbours.begin() ; it != neighbours.end(); ++it) {
@@ -318,8 +354,8 @@ private:
 
     //remove bond by address. Note that calling this by itself breaks the symmetry of bonds
     void removeBond(AgentBase* index) {
-        for (typename nb_vec_t::iterator it = bonds.begin() ; it != bonds.end(); ++it) {
-            if (*it == index) {
+        for (typename bond_vec_t::iterator it = bonds.begin() ; it != bonds.end(); ++it) {
+            if (it->other == index) {
                 bonds.erase(it);
                 return;
             }
@@ -330,29 +366,37 @@ private:
         if (symmetric) {
             other->addBond(this, false);
         }
-        bonds.push_back(other);
+        bonds.push_back(Bond(other, norm<nDim>(other->pos - this->pos)));
     }
 
-    const AgentTypeId  typeId;
+    inline void addBond(AgentBase* other, double length0, bool symmetric) {
+        if (symmetric) {
+            other->addBond(this, length0, false);
+        }
+        bonds.push_back(Bond(other, length0));
+    }
+
+
+    const AgentTypeId   typeId;
     //bool              ghost;
-    point_t            pos, pos0;
-    double             r, strain, pressure;
-    point_t            mobility;
-    bool               isMobile, isAffected = true;
-    point_t*           surfaceNormal = nullptr;
-    point_t            force;
+    point_t             pos, pos0;
+    double              r, strain, pressure;
+    point_t             mobility;
+    bool                isMobile, isAffected = true;
+    point_t*            surfaceNormal = nullptr;
+    point_t             force;
 //    point_t            stressvec;
-    point_t            stress;
-    nb_vec_t           neighbours, bonds;
-    double             stressmatrix [6]; // 00, 10, 20, 11, 22, 21
-    size_t             id;
+    point_t             stress;
+    nb_vec_t            neighbours;
+    bond_vec_t          bonds;
+    double              stressmatrix [6]; // 00, 10, 20, 11, 22, 21
+    size_t              id;
     //int ghostindex;
 protected:
     double wssOsi;
     double wssMax;
 
 };
-
 
 } // end namespace absmc
 

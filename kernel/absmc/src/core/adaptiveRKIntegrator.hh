@@ -18,12 +18,15 @@ namespace absmc {
     void RungeKuttaIntegratorMPI<Agent>::integrate(std::vector<Agent*> & agents, IntegratorController & controller)
     {
         double time = 0.0;
-        int iter = 0;
+        size_t iter = 0;
 
         // make sure neighbourhood records are up to date
         neighbourDetector.updateSlowTimeScale(agents);
         // keep track of maximum displacement travelled by any agent at this step
         double displMax = 0.0;
+
+        // keep track of the residual, if it doesn't go down, we have to reduce the timestep
+        double max_residual = std::numeric_limits<double>::max();
 
         // statistics on force residuals (for convergence monitoring)
         util::SimpleStatistics residualStatistics;
@@ -31,6 +34,7 @@ namespace absmc {
         // initial guess for time step
         double dt = maxTimeStep;
         const size_t nAgents = agents.size();
+        double maxTimeStepOrig = maxTimeStep;
 
         force1.resize(nAgents);
         force2.resize(nAgents);
@@ -50,10 +54,18 @@ namespace absmc {
             iter++;
             totalIter++;
             log(totalIter, totalTime, iter, time, dt, residualStatistics);
-            //std::cout << "Step done, max force is " << residualStatistics.getMax() << std::endl;
+
+            //adjust max timestep if we have to
+            // if (max_residual * 1.1 < residualStatistics.getMax()) {
+            //     maxTimeStep = maxTimeStep * 0.618;
+            // }
+            max_residual = residualStatistics.getMax();
+            // std::cout << "Step done, max force is " << residualStatistics.getMax() << std::endl;
         }
         calculateForcesAndStress(agents);
-        //std::cout << "Integration converged" << std::endl;
+        // return maxTimeStep up if it gets too small
+        maxTimeStep = (maxTimeStep + maxTimeStepOrig) / 2.;
+        std::cout << "Integration converged in " << iter << " iterations" << std::endl;
     }
 
     template<class Agent>
@@ -108,7 +120,7 @@ namespace absmc {
 
                 const size_t nBonds = agent->bonds.size();
                 for (size_t iNb=0; iNb<nBonds; iNb++) {
-                    force1[iAgent] += bondForces.calculateForce(*agent, *(agent->bonds[iNb]) ) ;
+                    force1[iAgent] += bondForces.calculateForce(*agent, *(agent->bonds[iNb].other), agent->bonds[iNb].length0) ;
                 }
             }
 
@@ -179,7 +191,7 @@ namespace absmc {
 
             const size_t nBonds = agent->bonds.size();
             for (size_t iNb=0; iNb<nBonds; iNb++) {
-                force2[iAgent] += bondForces.calculateForce(*agent, *(agent->bonds[iNb]) ) ;
+                force2[iAgent] += bondForces.calculateForce(*agent, *(agent->bonds[iNb].other), agent->bonds[iNb].length0) ;
             }
         }
 
@@ -221,7 +233,7 @@ namespace absmc {
 
             const size_t nBonds = agent->bonds.size();
             for (size_t iNb=0; iNb<nBonds; iNb++) {
-                force3[iAgent] += bondForces.calculateForce(*agent, *(agent->bonds[iNb]) ) ;
+                force3[iAgent] += bondForces.calculateForce(*agent, *(agent->bonds[iNb].other), agent->bonds[iNb].length0) ;
             }
         }
 
@@ -264,7 +276,7 @@ namespace absmc {
 
             const size_t nBonds = agent->bonds.size();
             for (size_t iNb=0; iNb<nBonds; iNb++) {
-                force4[iAgent] += bondForces.calculateForce(*agent, *(agent->bonds[iNb]) ) ;
+                force4[iAgent] += bondForces.calculateForce(*agent, *(agent->bonds[iNb].other), agent->bonds[iNb].length0) ;
             }
         }
         double newDt = *dt;
@@ -294,13 +306,17 @@ namespace absmc {
             Agent* agent = agents[iAgent];
 
             // skip obstacles
-            if (!agent->isMobile) continue;
+            // if (!agent->isMobile) continue;
 
             unaryForces.accumulate(*agent);
             if (!agent->isAffected) continue;
 
             const size_t nNb = agent->neighbours.size();
             for (size_t iNb=0; iNb<nNb; iNb++) {
+
+                // For immobile (boundary) agents only calculate the interaction with mobile agents
+                if ((!agent->isMobile) && (!agent->neighbours[iNb]->isMobile)) continue;
+
                 point_t forceVec = binaryForces.calculateForce(*agent, *(agent->neighbours[iNb]) ) ;
 
                 point_t const& pos1 = agent->pos;
@@ -318,12 +334,12 @@ namespace absmc {
                 const double zproject = (pos2[2]-pos1[2]) / distance;
 
                 const double l1 = R1 + 0.5*(distance - R1 - R2);
-                const double f12radeq = l1*force; //virial
+                const double f12radeq = l1*force; //virial  //Force > 0 means attraction
 
                 agent->addStress(point_t(xproject * f12radeq,   //not needed on intermediate steps
                                          yproject * f12radeq,       //used in the necrosis rule
                                          zproject * f12radeq) , R1*R1*R1);
-                const double f_times_l_over_v = 0.75 * f12radeq/(3.1415926 * R1*R1*R1); // minus to make stress matrix components (and pressure) positive when forces are repulsive
+                const double f_times_l_over_v = 0.75 * f12radeq/(3.1415926 * R1*R1*R1); // attraction => positive stress
                 agent->addStressMatrix(f_times_l_over_v * xproject * xproject, // virial stress matrix, eq. to macroscopic Cauchy stress
                                         f_times_l_over_v * yproject * xproject,                    // elements are f_x * delta-r_x etc.
                                         f_times_l_over_v * zproject * xproject,
@@ -337,15 +353,15 @@ namespace absmc {
 
             const size_t nBonds = agent->bonds.size();
             for (size_t iNb=0; iNb<nBonds; iNb++) {
-                point_t forceVec = bondForces.calculateForce(*agent, *(agent->bonds[iNb]) ) ;
+                point_t forceVec = bondForces.calculateForce(*agent, *(agent->bonds[iNb].other), agent->bonds[iNb].length0) ;
 
                 point_t const& pos1 = agent->pos;
-                point_t const& pos2 = (agent->bonds[iNb])->pos;
+                point_t const& pos2 = (agent->bonds[iNb].other)->pos;
 
                 // distance (real dimensions)
                 const double distance = metrics.dist(pos1, pos2);
                 const double R1 = agent->r;
-                const double R2 = (agent->bonds[iNb])->r;
+                const double R2 = (agent->bonds[iNb].other)->r;
                 const double force = bondForces.calculateForce(R1, R2, distance);
 
 
@@ -359,7 +375,7 @@ namespace absmc {
                 agent->addStress(point_t(xproject * f12radeq,   //not needed on intermediate steps
                                          yproject * f12radeq,       //used in the necrosis rule
                                          zproject * f12radeq) , R1*R1*R1);
-                const double f_times_l_over_v = 0.75 * f12radeq/(3.1415926 * R1*R1*R1); // minus to make stress matrix components (and pressure) positive when forces are repulsive
+                const double f_times_l_over_v = 0.75 * f12radeq/(3.1415926 * R1*R1*R1); // attraction => positive stress
                 agent->addStressMatrix(f_times_l_over_v * xproject * xproject, // virial stress matrix, eq. to macroscopic Cauchy stress
                                         f_times_l_over_v * yproject * xproject,                    // elements are f_x * delta-r_x etc.
                                         f_times_l_over_v * zproject * xproject,

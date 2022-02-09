@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cfloat>
 #include <cstdlib>
+#include <cmath>
 
 #include "core/agentFileReader.h"
 #include "core/agentContainer.h"
@@ -31,40 +32,41 @@ public:
 
     /// Create balloon inside a given arterial geometry
     ///
-    SimpleBalloon3D(AgentContainer<3> & agentContainer, double cY, double cZ, double xMin, double xMax, double elementR) :
-        cY(cY), cZ(cZ), xMin(xMin), xMax(xMax), elementR(elementR) {
+    SimpleBalloon3D(double elementR, double length, double balloonR) :
+        cY(0.0), cZ(0.0), elementR(elementR) {
 
         /// detect smallest free r for each x-value
-        const double dx = elementR;
-        auto agents = agentContainer.getAgentVector();
-        const size_t numX = (xMax - xMin) / dx;
-        std::vector<double> freeR;
-        freeR.resize(numX+1);
+        const double spacing = elementR;
+        const double dx = spacing * 0.5*sqrt(3.0);
+        const size_t numX = (length) / dx + 1;
 
-        for(auto const& agent: agents) {
-            point_t pos = agent->getPos();
-            if (pos[0] < xMin || pos[0] > xMax) continue;
-            const size_t xRow = (pos[0] - xMin) / dx;
-
-            // distance from symmetry axis
-            const double rSqr = (pos[1]-cY)*(pos[1]-cY) + (pos[2]-cZ)*(pos[2]-cZ);
-            const double r = sqrt(rSqr);
-
-            if (r < freeR[xRow] || freeR[xRow] == 0.0) {
-                freeR[xRow] = r;
-            }
-        }
         /// generate balloon agents in a ring shape for each x-value
         /// and add each value to the index
-        auto it = std::max_element(std::begin(freeR), std::end(freeR));
-        const double angleStep = dx / (*it) ;
-        for (size_t xRow = 0; xRow < freeR.size(); xRow++) {
-            for (double alpha = 0; alpha < 2 * 3.14159; alpha += angleStep) {
-                point_t pos(xMin + xRow * dx, sin(alpha) * (freeR[xRow] - elementR), cos(alpha) * (freeR[xRow] - elementR) );
+        const double angleStep = spacing / balloonR;
+        for (size_t xRow = 0; xRow < numX; xRow++) {
+            for (double alpha = (xRow % 2 == 0) ? 0. : angleStep / 2; alpha < 2. * math::pi; alpha += angleStep) {
+                point_t pos(xRow * dx, sin(alpha) * (balloonR), cos(alpha) * (balloonR) );
                 Obstacle3D* balloonElem = new Obstacle3D(pos, pos, elementR);
                 obstacles.push_back(balloonElem);
             }
         }
+
+        /// add spherical sections at the ends of the stent
+        const double numEdge = (balloonR / dx);
+        for (size_t xRow = 0; xRow < numEdge; xRow++) {
+            const double edgeR = sqrt((balloonR * balloonR) - (xRow * dx) * (xRow * dx));
+            const double angleStepEdge = spacing / edgeR;
+            for (double alpha = (xRow % 2 == 0) ? 0. : angleStepEdge / 2; alpha < 2. * math::pi; alpha += angleStepEdge) {
+                point_t pos1(0. - xRow * dx, sin(alpha) * (edgeR), cos(alpha) * (edgeR) );
+                point_t pos2(length + xRow * dx, sin(alpha) * (edgeR), cos(alpha) * (edgeR) );
+                Obstacle3D* balloonElem1 = new Obstacle3D(pos1, pos1, elementR);
+                Obstacle3D* balloonElem2 = new Obstacle3D(pos2, pos2, elementR);
+                obstacles.push_back(balloonElem1);
+                obstacles.push_back(balloonElem2);
+            }
+        }
+
+
     }
 
     /// Destructor; does not delete obstacles.
@@ -159,9 +161,9 @@ public:
         }
     }
 
-    void moveToCenterX (double vesselX) {
+    void moveToCenterX (double centerX) {
         const size_t nObst = obstacles.size();
-        point_t center(vesselX * 0.5, cY, cZ);
+        point_t center(centerX, cY, cZ);
         point_t min, max;
         findBoundingBox(min, max);
 
@@ -173,7 +175,7 @@ public:
         }
     }
 
-    void removeBalloon(AgentContainer<3> & agentContainer) {
+    void remove(AgentContainer<3> & agentContainer) {
         std::set< AgentBase<3>* > setToRemove(obstacles.begin(), obstacles.end());
         agentContainer.remove(setToRemove);
     }

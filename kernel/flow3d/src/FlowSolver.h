@@ -215,32 +215,25 @@ void FlowSolver::initialize() {
 T FlowSolver::calculateReFromReal() {
     //Re = u_real * l_real / nu_real
 
-    //corresponds to unit length in LB system
-    T x_conversion_factor = dx_real * 0.001 * N;
-    T Re = velocity_real * x_conversion_factor / blood_nu;
+    //corresponds to unit length in dimensionless system (N cells), characteristic size of the system
+    T x_characteristic = dx_real * 0.001 * N;
+    T Re = velocity_real * x_characteristic / blood_nu;
     pcout << "Reynolds number calculated as " << Re << std::endl;
     return Re;
 }
 
 
-//Converts WSS from lattice units to real units (Pa)
+//Calculates WSS in real units (Pa) from strain rate in lattice units
 T FlowSolver::shearStressConversionFactor() {
     //wss = nu * rho * du / dy
-    T rho_conversion_factor = 1000; //average lattice rho is 1; blood is approximated with water
+    T rho_real = 1000.; //blood is approximated with water
     T u_conversion_factor = velocity_real / parameters->getLatticeU();
 
-    //corresponds to unit length in LB system
-    //T x_conversion_factor = getParameterByName("flowdx[mm]") * 0.001 * parameters->getResolution();
-    //annihilated with the same factor in the expression for nu_phys
-    //left here for clarity
+    //corresponds to unit length (one cell) in LB system
+    T x_conversion_factor = dx_real * 0.001;
+    T nu_real = blood_nu;
 
-    //nu_phys = u_phys * l_char_phys / Re
-    T nu_phys = velocity_real
-            //* x_conversion_factor //this is annihilated with the x conversion factor above (for 1/dy)
-            / parameters->getRe();
-    T nu_conversion_factor = nu_phys / parameters->getLatticeNu();
-
-    T conversion_factor = nu_conversion_factor * rho_conversion_factor * u_conversion_factor;
+    T conversion_factor = nu_real * rho_real  * u_conversion_factor / x_conversion_factor;
     return conversion_factor;
 }
 
@@ -271,7 +264,7 @@ void FlowSolver::generateParameters(const T uConst)
     //1 (dimensionless) <=> N * dx_phys (mm)
 
     T Re = calculateReFromReal();
-    T uMax = uConst/(T)N; // Needed to avoid compressibility errors.
+    T uMax = 0.04; // Needed to avoid compressibility errors.
 
     parameters = new IncomprFlowParam<T> (uMax, Re, N,
                    (T)(Nx - 1) / (T) N, // lx
@@ -331,12 +324,13 @@ void FlowSolver::sendShearStress(MultiScalarField3D<T>& realwsstress) {
 
 
 void FlowSolver::writeOutput(bool writeToFile) {
-    computeStrainRateFromStress(*lattice, *wsstress, lattice->getBoundingBox());
-    MultiScalarField3D<T> wssNorm = *computeSymmetricTensorNorm(*wsstress);
+    auto strainrate = computeStrainRate(*computeVelocity(*lattice));
+    // computeStrainRateFromStress(*lattice, *wsstress, lattice->getBoundingBox());
+    MultiScalarField3D<T> strainRateNorm = *computeSymmetricTensorNorm(*strainrate);
     //MultiScalarField3D<T> realwsstress = *extractComponent(wsstress, lattice->getBoundingBox(), 0);
     //RETURN VALUE IN Pa
     //(multiply by 10 to convert from Pa to dynes/cm^2)
-    MultiScalarField3D<T> realwsstress = *multiply(/*10. * */shearStressConversionFactor(), wssNorm, lattice->getBoundingBox());
+    MultiScalarField3D<T> realwsstress = *multiply(/*10. * */shearStressConversionFactor(), strainRateNorm, lattice->getBoundingBox());
 
     pcout << "Sending shear stress at time step " << macroIter << std::endl;
 
@@ -350,10 +344,10 @@ void FlowSolver::writeOutput(bool writeToFile) {
     // Write data
     if ((datFieldsIter != 0) && (macroIter % datFieldsIter == 0)) {
         plb_ofstream ofile((createFileName("wssfield", macroIter , 4)+".dat").c_str());
-        plb_ofstream ofilereynolds((createFileName("reynolds", macroIter , 4)+".dat").c_str());
+        //plb_ofstream ofilereynolds((createFileName("reynolds", macroIter , 4)+".dat").c_str());
         //plb_ofstream ofilelspeed((createFileName("latticespeed", macroIter , 4)+".dat").c_str());
         ofile << realwsstress << endl;
-        ofilereynolds << parameters->getRe() << endl;
+        //ofilereynolds << parameters->getRe() << endl;
         //ofilelspeed << parameters->getLatticeU() << endl;
 
         /// write pressure (Pa)
@@ -450,7 +444,7 @@ void FlowSolver::execute(int argc, char* argv[])
 //                logger::info("geometry changed; recomputing flow");
         sourceToUnSerializer(new ReadFromSerialArray<int32_t> (geometry.data(), geometry.size()), charMask->getBlockUnSerializer(charMask->getBoundingBox(), IndexOrdering::forward));
 
-        T uConst = 2.0; //for calculating max lattice speed. This value results in almost incompressible fluid
+        T uConst = 2.0; //default=2.0 for calculating max lattice speed. This value results in almost incompressible fluid
         generateParameters(uConst);
         printParameters(*lattice, *parameters);
 

@@ -27,6 +27,7 @@ public:
             /*not going to kill IEL, but going to transform it into an SMC, so IEL is really a thin layer*/
             point_t const& curPos = agent.getPos();
             point_t const& curPos0 = agent.getPos0();
+
             agent_base_t* agentB = new SMC3D(curPos, curPos0, agent.getR());
             agentsCreated.push_back(agentB);
 
@@ -37,36 +38,28 @@ public:
 
         // strain computation ...
         const point_t pos = agent.getPos();
-        const point_t pos0 = agent.getPos0();
 
         // for all bonds of type IEL3D
-        IEL3D::nb_vec_t const& neighbours = agent.getBonds();
-        const size_t nNb = neighbours.size();
+        IEL3D::bond_vec_t const& bonds = agent.getBonds();
+        const size_t nNb = bonds.size();
         size_t num_strains = 0;
         double strain_acc = 0.; //strain accumulator
         for (size_t iNb=0; iNb<nNb; iNb++) {
 
-            if (neighbours[iNb]->getTypeId() != tIEL3D) continue;
+            if (bonds[iNb].other->getTypeId() != tIEL3D) continue;
             else num_strains += 1;
 
             // compute initial and current distance and strain
-            const point_t nbPos  = neighbours[iNb]->getPos();
-            const point_t nbPos0 = neighbours[iNb]->getPos0();
-
-            point_t dist, dist0;
-            dist = pos - nbPos;
-            dist0 = pos0 - nbPos0;
-
-            const double distNorm  = norm<3>(dist);
-            const double distNorm0 = norm<3>(dist0);
-            const double strain = (distNorm-distNorm0) / distNorm0;
+            const point_t nbPos  = bonds[iNb].other->getPos();
+            const double distNorm  = norm<3>(pos - nbPos);
+            const double strain = (distNorm - bonds[iNb].length0) / bonds[iNb].length0;
 
             strain_acc += strain;
 
             // if strain is positive and larger than threshold, break the bond
-            if (distNorm0 > 0 && strain > maxStrain) {
+            if (strain > maxStrain) {
                 //std::cout << "breaking IEL bond: pairwise strain=" << strain << " > maxStrain" << std::endl;
-                agent.breakBond(neighbours[iNb]);
+                agent.breakBond(bonds[iNb].other);
 //                agentsDeleted.push_back(&agent);
 //                return;
             }

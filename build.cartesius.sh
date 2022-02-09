@@ -1,8 +1,7 @@
 #!/bin/bash
 
-module load pre2019
-module load OpenMPI/2.1.1-GCC-6.4.0-2.28
-module load CMake/3.12.1-GCCcore-6.4.0
+module load 2019
+module load GCC/7.3.0-2.30 OpenMPI/4.0.3-GCC-7.3.0-2.30 CMake/3.12.1-GCCcore-7.3.0
 
 export MUSCLE3_HOME="$HOME/muscle3"
 

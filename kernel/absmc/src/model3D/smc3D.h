@@ -18,7 +18,7 @@ public:
 
     enum CycleState { G0, G1, SG2M };
     SMC3D(point_t pos, point_t  pos0, double r)
-    : CellBase3D(tSMC3D, pos, pos0, r), rule(0), state(G0), age(0), clock(0), baFlag(true), ciFlag(false), selectedForNOFlag(true),
+    : CellBase3D(tSMC3D, pos, pos0, r), rule(0), state(G0), age(0), clock(0), baFlag(true), ciFlag(false), noFlag(false), selectedForNOFlag(true),
           lengthG1(static_cast<int>(util::Random::getNextGauss(SMC3D::lengthG1Mean, SMC3D::lengthG1StdDev)) ) { }
     // end of debug
 
@@ -26,13 +26,13 @@ public:
             int age, int clock, int lengthG1,
             bool baFlag, bool ciFlag, bool selectedForNOFlag)
     : CellBase3D(tSMC3D, pos, pos0, r, drugConc, wssOsi, wssMax, neoDist, nitricConc), rule(0), state(G0),
-    age(age), clock(clock), baFlag(baFlag), ciFlag(ciFlag), selectedForNOFlag(selectedForNOFlag),
+    age(age), clock(clock), baFlag(baFlag), ciFlag(ciFlag), noFlag(false), selectedForNOFlag(selectedForNOFlag),
     lengthG1(lengthG1) { }
 
     virtual SMC3D* clone() const { return new SMC3D(*this); }
 
-    void setAgentRule(rule_t *const rule_) {  rule = rule_; }
-    rule_t *const getAgentRule() { return rule; }
+    void setAgentRule(std::shared_ptr<rule_t> const rule_) {  rule = rule_; }
+    std::shared_ptr<rule_t> const getAgentRule() { return rule; }
 
     virtual void execAgentRule(size_t iAgent, std::vector<base_t*> & agentsCreated, std::vector<base_t*> & agentsDeleted) {
         CellBase3D::execAgentRule(iAgent, agentsCreated, agentsDeleted);
@@ -87,7 +87,7 @@ public:
     }
 
 private:
-    rule_t* rule;
+    std::shared_ptr<rule_t> rule;
     CycleState  state;          // cell cycle state
     int         age;            // number of mitotic cycles completed
     int         clock;          // cell cycle clock

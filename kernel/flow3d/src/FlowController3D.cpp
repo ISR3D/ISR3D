@@ -32,18 +32,9 @@ int main(int argc, char * argv[]) {
         FlowSolver flowSolver(instance);
         pcout << "Initializing flow solver..." << std::endl;
 
-        cout << "Flow solver initialized at rank " << plb::global::mpi().getRank()  << std::endl;
-
-        plb::global::mpi().barrier();
-
-        pcout << "All flow solver processes initialized" << std::endl;
-
-
         while (instance.reuse_instance()) {
             pcout << "Receiving geometry" << std::endl;
-            plb::global::mpi().barrier();
             flowSolver.receiveMask();
-            plb::global::mpi().barrier();
 
             if (!plbInitialized) {
                 /// initialize the flow model

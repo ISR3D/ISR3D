@@ -1,0 +1,35 @@
+<project name="Blood Flow" default="compile">
+
+  <property name="build.dir" location="build"/>
+
+  <target name="compile">
+    <echo message="Building ${ant.project.name}..."/>
+    <mkdir dir="${build.dir}" />
+
+    <exec executable="cmake" dir="${build.dir}" failonerror="true">
+        <arg value="-DPALABOS_HOME=${palabos.dir}"/>
+        <arg value="-DMUSCLE3_HOME=${muscle3.dir}"/>
+        <arg value="-DLOCAL_LIB=${lib.dir}"/>
+        <arg value="../src" />
+    </exec>
+    <exec executable="make" dir="${build.dir}" failonerror="true">
+        <arg value="-j8" />
+    </exec>
+  </target>
+
+  <target name="clean">
+    <echo message="Cleaning ${ant.project.name}..."/>
+    <delete dir="${build.dir}" />
+  </target>
+
+  <target name="install">
+      <echo message="Installing ${ant.project.name}..."/>
+      <copy todir="${main.build.dir}">
+          <fileset dir="${build.dir}">
+            <include name="FlowController3D"/>
+            <include name="kernel/**"/>
+        </fileset>
+      </copy>
+  </target>
+
+</project>

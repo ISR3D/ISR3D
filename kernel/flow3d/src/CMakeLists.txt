@@ -19,7 +19,7 @@ message("Generated with config types: ${CMAKE_CONFIGURATION_TYPES}")
 message(${CMAKE_BUILD_TYPE})
 
 # Compiler flags
-set(CMAKE_CXX_FLAGS "-std=c++14 -Wall -Wnon-virtual-dtor")
+set(CMAKE_CXX_FLAGS "-std=c++17 -Wall -Wnon-virtual-dtor")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -funroll-loops -DNDEBUG -mtune=native -march=native")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -DPLB_DEBUG -O0")
 

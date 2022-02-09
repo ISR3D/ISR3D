@@ -54,7 +54,6 @@ public:
     size_t count() const;
     /// Count all agents of a given type
     size_t count(AgentTypeId typeId) const;
-    size_t countSelected(AgentTypeId typeId) const;
     /// Count all agents for which the predicate p returns true
     template<class BinaryPred> size_t count(BinaryPred p) const;
 

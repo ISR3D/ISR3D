@@ -9,7 +9,7 @@ find_package(PkgConfig REQUIRED)
 pkg_search_module(PKG_MUSCLE3 REQUIRED IMPORTED_TARGET libmuscle)
 
 # set defaults for compiler flags, values are editable by user
-set(P_CXX_FLAGS "-fopenmp -std=c++14 -Wall -pedantic -Wno-long-long -Wno-strict-aliasing" CACHE STRING "Flags used by the compiler during all build types.")
+set(P_CXX_FLAGS "-fopenmp -std=c++17 -Wall -pedantic -Wno-long-long -Wno-strict-aliasing" CACHE STRING "Flags used by the compiler during all build types.")
 set(P_CXX_FLAGS_DEBUG "-O -g" CACHE STRING "")
 #set(P_CXX_FLAGS_RELEASE "-O3 -funroll-loops -fno-signed-zeros -fno-trapping-math -fassociative-math -DNDEBUG -mtune=native -march=native" CACHE STRING "")
 set(P_CXX_FLAGS_RELEASE "-O3 -funroll-loops -DNDEBUG -mtune=native -march=native" CACHE STRING "")

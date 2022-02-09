@@ -123,9 +123,9 @@ public:
         }
     }
 
-    void moveToCenterX (double vesselX) {
+    void moveToCenterX (double centerX) {
         const size_t nObst = obstacles.size();
-        point_t center(vesselX * 0.5, cY, cZ);
+        point_t center(centerX, cY, cZ);
         point_t min, max;
         findBoundingBox(min, max);
 

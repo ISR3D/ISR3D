@@ -11,7 +11,9 @@
 #include "kdtree/kdtree.hh"
 #include "core/pointSet.h"
 #include "kdtree/euclideanMetrics.h"
+#include "util/logger.h"
 
+using util::logger;
 
 namespace absmc {
 
@@ -104,8 +106,8 @@ namespace absmc {
         }
 
         void printCount() const {
-            std::cout << "Initial coordinates number: " << initCoords.count() << std::endl;
-            std::cout << "Steps number: " << steps.size() << std::endl;
+            logger() << "Initial coordinates number: " << initCoords.count() << std::endl;
+            logger() << "Steps number: " << steps.size() << std::endl;
 //            for(auto step : steps) {
 //                std::cout << "Points in step: " << step->count() << std::endl;
 //            }

@@ -35,11 +35,31 @@ public:
     //Force > 0 means attraction
     virtual double calculateForce(const double& firstR, const double& secondR, const double& distance) = 0;
 
-    virtual void accumulate(Agent & agent1, Agent & agent2) {
-        agent1.addForce(calculateForce(agent1, agent2));
-    }
+};
+
+
+template<class Agent>
+class BondForce : public BinaryForce < Agent > {
+public:
+    typedef Point<Agent::nDim, double> point_t;
+    /// accumulate functions may modify both agents at the same time.
+    /// If they do, it's their job to ensure they only do it once each cycle,
+    /// since the integrator is likely to pass both (agent1, agent2) and (agent2, agent1) to them.
+
+    /// returns the force vector acting on agent 1
+    virtual point_t calculateForce(Agent & agent1, Agent & agent2) = 0;
+
+    //Force > 0 means attraction
+    virtual double calculateForce(const double& firstR, const double& secondR, const double& distance) = 0;
+
+    /// returns the force vector acting on agent 1
+    virtual point_t calculateForce(Agent & agent1, Agent & agent2, const double& bond_length) = 0;
+
+    //Force > 0 means attraction
+    virtual double calculateForce(const double& firstR, const double& secondR, const double& distance, const double& bond_length) = 0;
 
 };
+
 
 
 } // end namespace absmc

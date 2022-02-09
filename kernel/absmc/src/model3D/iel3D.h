@@ -20,8 +20,8 @@ public:
 
     virtual IEL3D* clone() const { return new IEL3D(*this); }
 
-    void setAgentRule(rule_t *const rule_) {  rule = rule_; }
-    rule_t *const getAgentRule() { return rule; }
+    void setAgentRule(std::shared_ptr<rule_t> const rule_) {  rule = rule_; }
+    std::shared_ptr<rule_t> const getAgentRule() { return rule; }
 
     virtual void execAgentRule(size_t iAgent, std::vector<base_t*> & agentsCreated, std::vector<base_t*> & agentsDeleted) {
         CellBase3D::execAgentRule(iAgent, agentsCreated, agentsDeleted);
@@ -29,7 +29,7 @@ public:
     }
 
 private:
-    rule_t* rule;
+    std::shared_ptr<rule_t> rule;
 };
 
 } // end namespace absmc

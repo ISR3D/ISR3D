@@ -231,8 +231,10 @@ void VoxelizingMapper::execute() {
     try{
        std::ofstream file;
        file.open(lumenFilename);
+       std::string dlmtr = "";
        for (auto area : lumenArea) {
-           file << area << '\t';
+           file << dlmtr << area;
+           dlmtr = '\t';
        }
        file << std::endl;
        file.close();

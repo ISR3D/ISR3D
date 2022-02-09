@@ -15,7 +15,7 @@ ENDIF (BUILD_MULTISCALE)
 option (BUILD_APP_3D "Select whether 3D stand-alone applications shall be build." ON)
 
 # set defaults for compiler flags, values are editable by user
-set(P_CXX_FLAGS "-fopenmp -std=c++14 -Wall -pedantic -Wno-long-long -Wno-strict-aliasing $ENV{OMP_FLAGS}" CACHE STRING "Flags used by the compiler during all build types.")
+set(P_CXX_FLAGS "-fopenmp -std=c++17 -Wall -pedantic -Wno-long-long -Wno-strict-aliasing $ENV{OMP_FLAGS}" CACHE STRING "Flags used by the compiler during all build types.")
 set(P_CXX_FLAGS_DEBUG "-O -g" CACHE STRING "")
 #set(P_CXX_FLAGS_RELEASE "-O3 -funroll-loops -fno-signed-zeros -fno-trapping-math -fassociative-math -DNDEBUG -mtune=native -march=native" CACHE STRING "")
 set(P_CXX_FLAGS_RELEASE "-O3 -funroll-loops -DNDEBUG -mtune=native -march=native" CACHE STRING "")
@@ -48,7 +48,7 @@ set (SRC_ABSMC_3D ${SRC_CORE} ${SRC_GRAPHICS} ${SRC_UTIL} ${SRC_KDTREE} ${SRC_MO
 #### coast kernel modules ####
 IF (BUILD_MULTISCALE)
     message(STATUS "BUILD SMCController")
-    add_executable (smc ${SRC_ABSMC_3D} coast/SMCController.cpp)
+    add_executable (smc ${SRC_ABSMC_3D} multiscale/SMCController.cpp)
     target_link_libraries (smc PUBLIC PkgConfig::PKG_MUSCLE3)
 #    target_link_libraries (smc PUBLIC PkgConfig::PKG_YMMSL)
 ENDIF (BUILD_MULTISCALE)
@@ -68,8 +68,8 @@ IF (BUILD_APP_3D)
     add_executable (generateSmoothCylinder app3D/generateSmoothCylinder.cpp)
     target_link_libraries (generateSmoothCylinder absmc3D)
 
-    add_executable (generateRidgedChannel app3D/generateRidgedChannel.cpp)
-    target_link_libraries (generateRidgedChannel absmc3D)
+#    add_executable (generateRidgedChannel app3D/generateRidgedChannel.cpp)
+#    target_link_libraries (generateRidgedChannel absmc3D)
 
     add_executable (equilibration3D app3D/equilibration3D.cpp)
     target_link_libraries (equilibration3D absmc3D)
@@ -83,8 +83,11 @@ IF (BUILD_APP_3D)
     add_executable (pressurizationDisplacement3D app3D/pressurizationDisplacement3D.cpp)
     target_link_libraries (pressurizationDisplacement3D absmc3D)
 
-    add_executable (inflation3D app3D/inflation3D.cpp)
-    target_link_libraries (inflation3D absmc3D)
+#    add_executable (inflation3D app3D/inflation3D.cpp)
+#    target_link_libraries (inflation3D absmc3D)
+
+    add_executable (uniaxialStrainTest app3D/uniaxialStrainTest.cpp)
+    target_link_libraries (uniaxialStrainTest absmc3D)
 
     add_executable (csvArteryLoader3D app3D/csvArteryLoader3D.cpp)
     target_link_libraries (csvArteryLoader3D absmc3D)

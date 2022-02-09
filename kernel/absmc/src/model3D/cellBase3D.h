@@ -3,6 +3,7 @@
 
 #include "core/agentBase.h"
 #include "core/agentRule.h"
+#include <memory>
 
 namespace absmc {
 
@@ -52,8 +53,8 @@ public:
         ostr << neoDist << " \t";
     }
 
-    void setAgentRule(rule_t *const rule_) {  rule = rule_; }
-    rule_t *const getAgentRule() { return rule; }
+    void setAgentRule(std::shared_ptr<rule_t> const rule_) {  rule = rule_; }
+    std::shared_ptr<rule_t> const getAgentRule() { return rule; }
 
     virtual void execAgentRule(size_t iAgent, std::vector<base_t*> & agentsCreated, std::vector<base_t*> & agentsDeleted) {
         if (rule) { rule->apply(iAgent, *this, agentsCreated, agentsDeleted); }
@@ -63,7 +64,7 @@ private:
     double drugConc;
     double neoDist;
     double nitricConc;   /// Nitric Oxide Concentration in Pa
-    rule_t* rule;
+    std::shared_ptr<rule_t> rule;
 };
 
 } // end namespace absmc

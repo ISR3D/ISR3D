@@ -1,0 +1,34 @@
+<project name="Collector-cpp" default="compile">
+
+  <property name="build.dir" location="build"/>
+
+  <target name="compile">
+    <echo message="Building ${ant.project.name}..."/>
+    <mkdir dir="${build.dir}" />
+
+    <exec executable="cmake" dir="${build.dir}" failonerror="true">
+        <arg value="-DMUSCLE3_HOME=${muscle3.dir}"/>
+        <arg value="-DLOCAL_LIB=${lib.dir}"/>
+        <arg value="../src" />
+    </exec>
+    <exec executable="make" dir="${build.dir}" failonerror="true">
+        <arg value="-j8" />
+    </exec>
+  </target>
+
+  <target name="clean">
+    <echo message="Cleaning ${ant.project.name}..."/>
+    <delete dir="${build.dir}" />
+  </target>
+
+  <target name="install">
+      <echo message="Installing ${ant.project.name}..."/>
+      <!-- copy exec with preserved permissions -->
+      <exec executable="cp" dir="${build.dir}">
+      <arg value="-p"/>
+      <arg value="collector"/>
+      <arg value="${main.build.dir}"/>
+      </exec>
+  </target>
+
+</project>

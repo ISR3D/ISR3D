@@ -52,6 +52,35 @@ private:
     double xLo, xHi;
 };
 
+/// Predicate returning true if agent is inside [xLo,xHi] interval.
+template<class Agent>
+class PSelectOutsideInterval : public std::binary_function<size_t, Agent, bool> {
+public:
+    PSelectOutsideInterval(size_t iDim_, double xLo_, double xHi_)
+        : iDim(iDim_), xLo(xLo_), xHi(xHi_) { }
+    bool operator()(size_t id, Agent* agent) {
+        const double x = agent->getPos()[iDim];
+        return ((x <= xLo) || (xHi <= x));
+    }
+private:
+    size_t iDim;
+    double xLo, xHi;
+};
+
+/// Predicate returning true if agent is more than L away from pos0.
+template<class Agent>
+class PSelectByDisplacement : public std::binary_function<size_t, Agent, bool> {
+public:
+    PSelectByDisplacement(double L_)
+        : L(L_) { }
+    bool operator()(size_t id, Agent* agent) {
+        const Point<3, double> pos = agent->getPos();
+        const Point<3, double> pos0 = agent->getPos0();
+        return (norm<3>(pos0 - pos) > L);
+    }
+private:
+    double L;
+};
 
 /// Predicate returning true for the specified fraction of randomly chosen agents.
 template<class Agent>

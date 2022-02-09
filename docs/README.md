@@ -1,6 +1,8 @@
 ISR3D and MUSCLE3:
 =======================
 
+This model is released as part of the InSilc project (https://insilc.eu)
+
 ISR3D model description
 -----------------------
 
@@ -54,13 +56,13 @@ Quick Installation Guide
 MUSCLE3
 -------
 
+The source code can be obtained from https://github.com/multiscale/muscle3/
+
 At this point, it is recommended to use MUSCLE3 version 0.4.0 available at https://github.com/multiscale/muscle3/releases/tag/0.4.0.
 
 The installation process is described in detail in the MUSCLE3 guide, located at https://muscle3.readthedocs.io/en/latest/installing.html
 
 Both Python and C++ parts of MUSCLE3 are required. The C++ part should be built with MPI support to enable parallel flow computation.
-
-It is recommended to test MUSCLE3 on its own (according to the MUSCLE3 guide) before running ISR3D.
 
 NB: before running models with MUSCLE3 the library path has be loaded by running
 
@@ -68,7 +70,7 @@ NB: before running models with MUSCLE3 the library path has be loaded by running
 
 (This can also be added to your ``~/.bashrc`` to run automatically on terminal startup)
 
-If you have installed MUSCLE3 in a Python virtual environment, as the guide recommends, the environment also has to be activated by running
+If you have installed MUSCLE3 in a Python virtual environment, as the guide recommends, the environment also has to be activated by running 
 
 ``source <MUSCLE3 venv location>/bin/activate``
 
@@ -77,24 +79,32 @@ ISR3D
 
 Dependencies: in addition to Muscle, ``cmake`` ver. 3.6.3 or later. Additional requirements are a MPI-compatible C++14 compiler (e.g. GCC 6+ and OpenMPI).
 
-The ISR3D model is capable of working with different flow solvers. This version is set up to use Palabos library, developed by UNIGE. By default, if Palabos is not detected when building the flow solver, it will be downloaded from the UNIGE repository using the script located at ``ISR3D/lib/install_palabos.sh``, which will install Palabos 2.2.0 to the ``ISR3D/lib/`` folder.
+The ISR3D model is capable of working with different flow solvers. This version is set up to use Palabos library, developed by UNIGE. By default, if Palabos is not detected when building the flow solver, it will be downloaded from the UNIGE repository using the script located at ``ISR3D/lib/install_palabos.sh``, which will install Palabos 2.2.0 to the ``/lib/`` folder.
 
-To build ISR3D, you'll need to create a build script with the correct settings for your machine, if one is not already available.
-These scripts are in the ``ISR3D/`` directory.
-
-If you are building locally, ``build.linux.sh`` will provide a starting point for a Debian-like Linux environment.
-Make sure your build file sets ``MUSCLE3_HOME`` to the location of your MUSCLE3 installation. For some machines, especially in HPC environments, it is necessary to prescribe the appropriate compiler name and the address of MUSCLE3 (and flags, if necessary). The ``ISR3D/`` folder also contains an example for the Dutch national supercomputer Cartesius, ``build.cartesius.sh`` and the Polish supercomputer Eagle, ``build.eagle.sh``.
-
-Once you have made a suitable build script, make sure that you are in the ``ISR3D/`` directory, and run the script using ``./build.<machine>.sh``.
+To compile ISR3D and install it into the active directory, create and run ``./ISR3D/build.<machinename>.sh``
+An example of this file for a desktop Debian-like machine is ``build.linux.sh``. Make sure to set ``MUSCLE3_HOME`` to the location of your MUSCLE3 installation.
+For different machines, especially in HPC environments, it is necessary to prescribe the appropriate compiler name and the address of MUSCLE3 (and flags, if necessary). The folder also contains an example for the Dutch national supercomputer Cartesius, ``build.cartesius.sh`` and the Polish supercomputer Eagle, ``build.eagle.sh``.
 
 After running the build script, you should see a CMake build output for each submodel, ending with ``BUILD SUCCESSFUL``, and the executables can be then be found in ``ISR3D/build``.
 To clean the build folders and remove CMake cache files, run ``./build.<machinename>.sh clean``. Cleaning the cache is recommended whenever your library configuration changes.
 
-Download the input file hosted at https://doi.org/10.5281/zenodo.4603912 and put them into the ``cxa`` folder.
+To test MUSCLE3 (on its own) and ISR3D run the following commands:
 
-Make a directory for your run in the top-level ``ISR3D/`` folder, e.g. ``mkdir -p results/test`` and ``cd`` into it.
+MUSCLE3
 
-In separate terminals, or through ``&``, run:
+Follow the guide for running test examples located at https://muscle3.readthedocs.io/en/latest/cplusplus.html
+
+ISR3D
+
+Generating a test example:
+```
+cd kernel/absmc
+./prepareGeneratedStent.sh ../../cxa/stage1.tinier_test_vessel.cfg
+```
+
+Make a directory for your run in the ISR3D folder, e.g. ``mkdir results & mkdir results/test`` and ``cd`` into it.
+
+In separate terminals, or through &, run:
 ```
 muscle_manager ../../cxa/input_stage4.ymmsl
 ../../build/smc --muscle-instance=smc
@@ -110,3 +120,30 @@ Visualizing the results
 
 The .vtp output files can be visualized with Paraview. Please note that by default Paraview does not show point data, so after loading the file you have to use the "Select points through" option and select the data area to visualize the points. After that you can use "Extract selection" to further manipulate the selected points.
 
+
+Uniaxial strain test
+--------------------
+
+For uninaxial strain tests, first a Python script is used to generate the tissue sample, then it is converted to a .dat format, equilibrated, and finally the uniaxial strain test itself is performed. Naturally, the first three steps (up to equilibration) can be shared between multiple strain tests, as long as the forces' equilibrium distance is the same.
+
+**Installation note:** since this test only involves the agent-based model, MUSCLE3 is not actually used. The necessary files can be built without relying on MUSCLE3. For this, in ``kernel/absmc/build.sh`` change the parameter to ``-DBUILD_MULTISCALE:BOOL=FALSE`` and run the ``./build.sh compile  && ./build.sh install`` directly. In this case, you still have to set up your compiler and the exports which are normally set in the machine-specific ``build.<machinename>.sh`` and the top-level ``ISR3D/build.sh``.
+
+First, the sample has to be generated with a Python script. For this, Poisson disk sampling is used. The script for generation is located in ``scripts/`` and takes the output file address and the dimensions along X, Y, and Z axes (in mm) to generate a rectangular sample. For example:
+```
+cd scripts
+python3 generate-cuboid-poisson-disc.py ../cxa/strain_test_sample.csv 2.0 0.4 1.2
+```
+
+The simulation parameters are denoted in a .cfg file. An example is located at ``cxa/stage1.strain_test.cfg``. The most notable parameters are the force coefficients ``strain_force_c1..c6``, the convergence level ``strain_convergence_level``, the maximum strain to be tested ``strain_max_value`` and the step between the strain values being tested ``strain_deform_step``.
+
+Once the .csv file is ready, you have to convert it to .dat to use in the simulation. For this, 
+```
+cd ISR3D/kernel/absmc/build
+./csvArteryLoader3D ../../../cxa/stage1.strain_test.cfg
+./equilibration3D ../../../cxa/stage1.strain_test.cfg
+```
+After this, you can perform the uniaxial strain tests with 
+```
+./uniaxialStrainTest ../../../cxa/stage1.strain_test.cfg
+```
+The stress values for each strain value will be printed to the console.

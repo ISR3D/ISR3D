@@ -86,8 +86,7 @@ void AgentContainer<nDim>::removeReferencesFromNeighbours(agent_t *const targetP
     }
     auto bondList = targetPtr->getBonds();
     for (auto& bnd : bondList) {
-        auto& bonds = bnd->getBonds();
-        bonds.erase(std::remove(bonds.begin(), bonds.end(), targetPtr), bonds.end() );
+        bnd.other->removeBond(targetPtr);
     }
 }
 
@@ -201,10 +200,10 @@ void AgentContainer<nDim>::replace(size_t iOldAgent, agent_t* newAgent) {
     }
     auto bondList = newAgent->getBonds();
     for (auto& bnd : bondList) {
-        auto& bonds = bnd->getBonds();
+        auto& bonds = bnd.other->getBonds();
         for (auto& backLink : bonds) {
-            if(backLink == oldAgent) {
-                backLink = newAgent;
+            if(backLink.other == oldAgent) {
+                backLink.other = newAgent;
             }
         }
     }
@@ -314,17 +313,6 @@ size_t AgentContainer<nDim>::count(AgentTypeId typeId) const
     const size_t nAgents = agents.size();
     for (size_t iAgent=0; iAgent<nAgents; iAgent++) {
         if (agents[iAgent]->getTypeId() == typeId) nMatching++;
-    }
-    return nMatching;
-}
-
-template<size_t nDim>
-size_t AgentContainer<nDim>::countSelected(AgentTypeId typeId) const
-{
-    size_t nMatching = 0;
-    const size_t nAgents = agents.size();
-    for (size_t iAgent=0; iAgent<nAgents; iAgent++) {
-        if (agents[iAgent]->getTypeId() == typeId && agents[iAgent]->getScalarByName("selectedForNOFlag") > 0.5) nMatching++;
     }
     return nMatching;
 }
