@@ -1,11 +1,10 @@
 ISR3D and MUSCLE3:
 =======================
 
-This model is released as part of the InSilc project (https://insilc.eu)
+# About ISR3D
+This model is released as part of the InSilc project (https://insilc.eu). Currently two versions have been released. Each of them is associated to a corresponding publication. You can find the exact version of the ISR3D used in that pulication in our release.
 
-ISR3D model description
------------------------
-
+# ISR3D model description
 The «3D in-stent restenosis» (ISR3D) application is intended for simulation of smooth muscle cells (SMC) proliferation and restenosis process as a complication
 after coronary stenting procedure. The 3D in-stent restenosis model (ISR3D) is a fully coupled 3D multiscale
 model, which includes several single-scale submodels as well as utility modules which facilitate communication
