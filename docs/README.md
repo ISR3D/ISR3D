@@ -5,8 +5,9 @@ Contents
 * [Model description](#Model-description)
 * [Quick installation guide](#Quick-installation-guide)
 * [Run the simulation](#Run-the-simulation)
+* [Uncertainty quantification](#Uncertainty-quantification)
 * [Visualization](#Visualization)
-* [Other functions](#Other-functions)
+* [Uniaxial strain test](#Uniaxial-strain-test)
 
 
 ## About ISR3D & MUSCLE3
@@ -97,42 +98,37 @@ For different machines, especially in HPC environments, it is necessary to presc
 After running the build script, you should see a CMake build output for each submodel, ending with ``BUILD SUCCESSFUL``, and the executables can be then be found in ``ISR3D/build``.
 To clean the build folders and remove CMake cache files, run ``./build.<machinename>.sh clean``. Cleaning the cache is recommended whenever your library configuration changes.
 
-To test MUSCLE3 (on its own) and ISR3D run the following commands:
 
-MUSCLE3
+## Run the simulation
+To test MUSCLE3 (on its own), please follow the guide for running test examples located at https://muscle3.readthedocs.io/en/latest/cplusplus.html.
 
-Follow the guide for running test examples located at https://muscle3.readthedocs.io/en/latest/cplusplus.html
-
-ISR3D
-
-Generating a test example:
+The simulation of the ISR3D can be divided into two parts. The first part is about initial stent deployment. The stent is expanded radially with a capsule-shaped balloon until it reaches a predefined deployment depth. The parameters needed for the process are all listed in a [configuration file](https://github.com/ISR3D/ISR3D/tree/master/config). To run this part, you can use following commands:
 ```
 cd kernel/absmc
-./prepareGeneratedStent.sh ../../cxa/stage1.tinier_test_vessel.cfg
+./prepareGeneratedStent.sh /directory-to-cfg-file/input_stage1.cfg
 ```
 
-Make a directory for your run in the ISR3D folder, e.g. ``mkdir results & mkdir results/test`` and ``cd`` into it.
-
-In separate terminals, or through &, run:
+At the end of the process, a multiple stage3 files will be generated. There are files are the necessary inputs for the second part of the simulation. The second part is about post-stenting tissue growth. The parameters of this process are all listed in [ymmsl configuration file](https://github.com/ISR3D/ISR3D/tree/master/config). To run the simulation, open several separate terminals, or through &, or use a bash script, run:
 ```
-muscle_manager ../../cxa/input_stage4.ymmsl
-../../build/smc --muscle-instance=smc
-../../build/voxelizer --muscle-instance=voxelizer
-../../build/distributor --muscle-instance=distributor
-mpirun -np 2 ../../build/FlowController3D --muscle-instance=flow
-../../build/collector --muscle-instance=collector
+muscle_manager /directory-to-stage4-ymmsl-file/input_stage4.ymmsl
+/Installation-directory-of-ISR3D/build/smc --muscle-instance=smc
+/Installation-directory-of-ISR3D/build/voxelizer --muscle-instance=voxelizer
+/Installation-directory-of-ISR3D/build/distributor --muscle-instance=distributor
+mpirun -np 2 /Installation-directory-of-ISR3D/build/FlowController3D --muscle-instance=flow
+/Installation-directory-of-ISR3D/build/collector --muscle-instance=collector
 ```
 Don't forget to load the MUSCLE3 library and enable venv if you use it. If you have done everything correctly, the models should start producing output as soon as all of them connect to the manager.
 
-Visualizing the results
------------------------
+## Uncertainty quantification
+To perform uncertainty quantification, a large number of evaluations are needed. ISR3D are fairly computational expensive. With a small vessel (2mm diameter), it takes around 500 to 600 core-hour for a single evaluation depending on the amount of growth. You would need some supercomputer resource to carry it out. We provide a [python script](https://github.com/ISR3D/ISR3D/blob/master/scripts/sample_generator.py) by which samples (Sobol sequence) of a UQ compaign can be generated and write them into corresponding configuration file (.cfg and .ymmsl). 
 
+## Visualization
 The .vtp output files can be visualized with Paraview. Please note that by default Paraview does not show point data, so after loading the file you have to use the "Select points through" option and select the data area to visualize the points. After that you can use "Extract selection" to further manipulate the selected points.
 
+It is also possible to process the output result with VMTK.
 
-Uniaxial strain test
---------------------
 
+## Uniaxial strain test
 For uninaxial strain tests, first a Python script is used to generate the tissue sample, then it is converted to a .dat format, equilibrated, and finally the uniaxial strain test itself is performed. Naturally, the first three steps (up to equilibration) can be shared between multiple strain tests, as long as the forces' equilibrium distance is the same.
 
 **Installation note:** since this test only involves the agent-based model, MUSCLE3 is not actually used. The necessary files can be built without relying on MUSCLE3. For this, in ``kernel/absmc/build.sh`` change the parameter to ``-DBUILD_MULTISCALE:BOOL=FALSE`` and run the ``./build.sh compile  && ./build.sh install`` directly. In this case, you still have to set up your compiler and the exports which are normally set in the machine-specific ``build.<machinename>.sh`` and the top-level ``ISR3D/build.sh``.
