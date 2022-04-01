@@ -63,8 +63,7 @@ For additional information please contact Pavel Zun, <pavel.zun (at) gmail.com>
 
 ## Quick Installation Guide
 
-MUSCLE3
-----------
+### MUSCLE3
 
 The source code can be obtained from https://github.com/multiscale/muscle3/
 
@@ -84,8 +83,7 @@ If you have installed MUSCLE3 in a Python virtual environment, as the guide reco
 
 ``source <MUSCLE3 venv location>/bin/activate``
 
-ISR3D
-----------
+### ISR3D
 
 Dependencies: in addition to Muscle, ``cmake`` ver. 3.6.3 or later. Additional requirements are a MPI-compatible C++14 compiler (e.g. GCC 6+ and OpenMPI).
 
