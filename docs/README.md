@@ -1,9 +1,20 @@
+Contents
+----------
+
+* [About ISR3D & MUSCLE3](#About-ISR3D-&-MUSCLE3)
+* [Model description](#Model-description)
+* [Quick installation guide](#Quick-installation-guide)
+* [Run the simulation](#Run-the-simulation)
+* [Visualization](#Visualization)
+* [Other functions](#Other-functions)
+
+
 ## About ISR3D & MUSCLE3
 The «3D in-stent restenosis» (ISR3D) model is released as part of the InSilc project (https://insilc.eu). Currently two versions have been released. Each of them is associated to a corresponding publication. You can find the exact version of the ISR3D used in that pulication in our release.
 
-ISR3D is a multiscale model simulating the post-stenting tissue growth. It consists of multiple submodels and the communication between the submodels is build by MUSCLE3 (MUSCLE Multiscale Coupling Library and Environment). We invite reader to [MUSCLE3](https://muscle3.readthedocs.io/en/latest/) for more details. 
+ISR3D is a multiscale model simulating the post-stenting tissue growth. It consists of multiple submodels and the communication between the submodels is build by [MUSCLE3](https://muscle3.readthedocs.io/en/latest/) (MUSCLE Multiscale Coupling Library and Environment). We invite user to [MUSCLE3](https://muscle3.readthedocs.io/en/latest/) for more details. 
 
-## ISR3D model description
+## Model description
 The ISR3D application is intended for simulation of smooth muscle cells (SMC) proliferation and restenosis process as a complication
 after coronary stenting procedure. The 3D in-stent restenosis model (ISR3D) is a fully coupled 3D multiscale
 model, which includes several single-scale submodels as well as utility modules which facilitate communication
@@ -52,7 +63,7 @@ For additional information please contact Pavel Zun, <pavel.zun (at) gmail.com>
 ## Quick Installation Guide
 
 MUSCLE3
--------
+----------
 
 The source code can be obtained from https://github.com/multiscale/muscle3/
 
@@ -73,7 +84,7 @@ If you have installed MUSCLE3 in a Python virtual environment, as the guide reco
 ``source <MUSCLE3 venv location>/bin/activate``
 
 ISR3D
------
+----------
 
 Dependencies: in addition to Muscle, ``cmake`` ver. 3.6.3 or later. Additional requirements are a MPI-compatible C++14 compiler (e.g. GCC 6+ and OpenMPI).
 
