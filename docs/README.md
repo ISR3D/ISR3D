@@ -1,4 +1,5 @@
-<Diagram src="https://github.com/ISR3D/ISR3D/blob/master/docs/SchematicDiagram.jpg" width="200" />
+<p align = "center">
+  <img src="https://github.com/ISR3D/ISR3D/blob/master/docs/SchematicDiagram.jpg" width="200" />
 
 Contents
 ----------
@@ -108,13 +109,13 @@ cd kernel/absmc
 ./prepareGeneratedStent.sh /directory-to-cfg-file/input_stage1.cfg
 ```
 
-At the end of the process, a multiple stage3 files will be generated. There are files are the necessary inputs for the second part of the simulation. The second part is about post-stenting tissue growth. The parameters of this process are all listed in [ymmsl configuration file](https://github.com/ISR3D/ISR3D/tree/master/config). To run the simulation, open several separate terminals, or through &, or use a bash script, run:
+At the end of the process, multiple stage3 files will be generated. These files are necessary inputs for the second phase of the simulation. The second part is about post-stenting tissue growth. The parameters of this process are all listed in [ymmsl configuration file](https://github.com/ISR3D/ISR3D/tree/master/config). To run the simulation, open several separate terminals, or through &, or use a bash script, run:
 ```
 muscle_manager /directory-to-stage4-ymmsl-file/input_stage4.ymmsl
 /Installation-directory-of-ISR3D/build/smc --muscle-instance=smc
 /Installation-directory-of-ISR3D/build/voxelizer --muscle-instance=voxelizer
 /Installation-directory-of-ISR3D/build/distributor --muscle-instance=distributor
-mpirun -np 2 /Installation-directory-of-ISR3D/build/FlowController3D --muscle-instance=flow
+mpirun -np <nproc> /Installation-directory-of-ISR3D/build/FlowController3D --muscle-instance=flow
 /Installation-directory-of-ISR3D/build/collector --muscle-instance=collector
 ```
 Don't forget to load the MUSCLE3 library and enable venv if you use it. If you have done everything correctly, the models should start producing output as soon as all of them connect to the manager.
@@ -125,8 +126,7 @@ To perform uncertainty quantification, a large number of evaluations are needed.
 ## Visualization
 The .vtp output files can be visualized with Paraview. Please note that by default Paraview does not show point data, so after loading the file you have to use the "Select points through" option and select the data area to visualize the points. After that you can use "Extract selection" to further manipulate the selected points.
 
-It is also possible to process the output result with VMTK.
-
+It is also possible to process the output result with VMTK [] but slightly more complicated. The post-processing scripts with VMTK are available in [scripts/vmtk](https://github.com/ISR3D/ISR3D/tree/master/scripts). 
 
 ## Uniaxial strain test
 For uninaxial strain tests, first a Python script is used to generate the tissue sample, then it is converted to a .dat format, equilibrated, and finally the uniaxial strain test itself is performed. Naturally, the first three steps (up to equilibration) can be shared between multiple strain tests, as long as the forces' equilibrium distance is the same.
