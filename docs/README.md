@@ -1,5 +1,4 @@
-![Diagram](https://github.com/ISR3D/ISR3D/blob/master/docs/SchematicDiagram.jpg =100x20)
-
+<Diagram src="https://github.com/ISR3D/ISR3D/blob/master/docs/SchematicDiagram.jpg" width="200" />
 Contents
 ----------
 
