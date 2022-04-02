@@ -1,4 +1,4 @@
-![Diagram](https://github.com/ISR3D/ISR3D/blob/master/docs/SchematicDiagram.jpg)
+![Diagram](https://github.com/ISR3D/ISR3D/blob/master/docs/SchematicDiagram.jpg=100x20)
 
 Contents
 ----------
