@@ -1,5 +1,5 @@
-<p align = "center">
-  <img src="https://github.com/ISR3D/ISR3D/blob/master/docs/SchematicDiagram.jpg" width="600" />
+<!-- <p align = "center">
+  <img src="https://github.com/ISR3D/ISR3D/blob/master/docs/SchematicDiagram.jpg" width="600" /> -->
 
 Contents
 ----------
@@ -103,7 +103,7 @@ To clean the build folders and remove CMake cache files, run ``./build.<machinen
 ## Run the simulation
 To test MUSCLE3 (on its own), please follow the guide for running test examples located at https://muscle3.readthedocs.io/en/latest/cplusplus.html.
 
-The simulation of the ISR3D can be divided into two parts. The first part is about initial stent deployment. The stent is expanded radially with a capsule-shaped balloon until it reaches a predefined deployment depth. The parameters needed for the process are all listed in a [configuration file](https://github.com/ISR3D/ISR3D/tree/master/config). To run this part, you can use following commands:
+The simulation of the ISR3D can be divided into two parts. The first part is about initial stent deployment. The stent is expanded radially with a capsule-shaped balloon until it reaches a predefined deployment depth. The parameters needed for the process are all listed in a cfg [configuration file](https://github.com/ISR3D/ISR3D/tree/master/config). To run this part, you can use following commands:
 ```
 cd kernel/absmc
 ./prepareGeneratedStent.sh /directory-to-cfg-file/input_stage1.cfg
@@ -126,7 +126,7 @@ To perform uncertainty quantification, a large number of evaluations are needed.
 ## Visualization
 The .vtp output files can be visualized with Paraview. Please note that by default Paraview does not show point data, so after loading the file you have to use the "Select points through" option and select the data area to visualize the points. After that you can use "Extract selection" to further manipulate the selected points.
 
-It is also possible to process the output result with VMTK [] but slightly more complicated. The post-processing scripts with VMTK are available in [scripts/vmtk](https://github.com/ISR3D/ISR3D/tree/master/scripts). 
+It is also possible to process the output result with [VMTK](http://www.vmtk.org/)(The Vascular Modeling Toolkit) but slightly more complicated. The post-processing scripts with VMTK are available in [scripts/vmtk](https://github.com/ISR3D/ISR3D/tree/master/scripts). 
 
 ## Uniaxial strain test
 For uninaxial strain tests, first a Python script is used to generate the tissue sample, then it is converted to a .dat format, equilibrated, and finally the uniaxial strain test itself is performed. Naturally, the first three steps (up to equilibration) can be shared between multiple strain tests, as long as the forces' equilibrium distance is the same.
